@@ -12,10 +12,11 @@ import {
   CHANNEL_OVERLAY_ERROR,
   CHANNEL_OVERLAY_READY,
   CHANNEL_REQUEST_SCREENSHOT,
-  DEFAULT_FIGMA_URL,
-  DEFAULT_OVERLAY_OPACITY,
   FIGMA_URL_KEY,
   type FigmaSyncErrorPayload,
+  getFigmaUrlGlobal,
+  getOverlayOpacityGlobal,
+  getOverlayVisibleGlobal,
   getVersionedStoryOverlayAssetPath,
   OVERLAY_OPACITY_KEY,
   OVERLAY_VISIBLE_KEY,
@@ -41,11 +42,9 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const api = useStorybookApi();
   const storyId = api.getCurrentStoryData()?.id ?? '';
 
-  const figmaUrl = (globals[FIGMA_URL_KEY] as string) ?? DEFAULT_FIGMA_URL;
-  const showOverlay = Boolean(globals[OVERLAY_VISIBLE_KEY]);
-  const overlayOpacity = Math.round(
-    ((globals[OVERLAY_OPACITY_KEY] as number | undefined) ?? DEFAULT_OVERLAY_OPACITY) * 100,
-  );
+  const figmaUrl = getFigmaUrlGlobal(globals);
+  const showOverlay = getOverlayVisibleGlobal(globals);
+  const overlayOpacity = Math.round(getOverlayOpacityGlobal(globals) * 100);
   const [fetchState, setFetchState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [fetchMessage, setFetchMessage] = useState('');
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
@@ -74,7 +73,6 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
       setFetchState('success');
       setFetchMessage('Overlay downloaded');
       setOverlayVersion(Date.now());
-      setOverlayAvailable(true);
       updateGlobals({
         [FIGMA_URL_KEY]: payload.figmaUrl,
         [OVERLAY_VISIBLE_KEY]: true,

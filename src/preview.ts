@@ -18,7 +18,10 @@ import {
   FIGMA_URL_KEY,
   type FigmaSyncErrorPayload,
   type FigmaSyncGlobals,
+  getOverlayOpacityGlobal,
+  getOverlayVisibleGlobal,
   getStoryOverlayAssetPath,
+  getVersionedStoryOverlayAssetPath,
   OVERLAY_OPACITY_KEY,
   OVERLAY_VISIBLE_KEY,
   type RequestScreenshotPayload,
@@ -50,13 +53,11 @@ const urlGlobals = getInitialGlobalsFromUrl();
 async function getOverlayDimensions(storyId?: string | null) {
   if (!storyId) return null;
 
-  const overlaySrc = getStoryOverlayAssetPath(storyId);
-
   return new Promise<OverlayDimensions | null>((resolve) => {
     const img = new Image();
     img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
     img.onerror = () => resolve(null);
-    img.src = `${overlaySrc}?t=${Date.now()}`;
+    img.src = getVersionedStoryOverlayAssetPath(storyId, Date.now());
   });
 }
 
@@ -112,8 +113,8 @@ channel.on(CHANNEL_REQUEST_SCREENSHOT, async (payload?: RequestScreenshotPayload
 
 const withOverlay = (StoryFn: StoryFunction<Renderer>, context: StoryContext<Renderer>) => {
   const overlaySrc = getStoryOverlayAssetPath(context.id);
-  const isVisible = Boolean(context.globals[OVERLAY_VISIBLE_KEY]);
-  const overlayOpacity = (context.globals[OVERLAY_OPACITY_KEY] as number | undefined) ?? DEFAULT_OVERLAY_OPACITY;
+  const isVisible = getOverlayVisibleGlobal(context.globals);
+  const overlayOpacity = getOverlayOpacityGlobal(context.globals);
 
   if (!overlaySrc || !isVisible) return StoryFn();
 

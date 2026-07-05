@@ -58,6 +58,18 @@ export interface FigmaSyncGlobals {
   [OVERLAY_OPACITY_KEY]: number;
 }
 
+export function getFigmaUrlGlobal(globals: Record<string, unknown>) {
+  return (globals[FIGMA_URL_KEY] as string | undefined) ?? DEFAULT_FIGMA_URL;
+}
+
+export function getOverlayVisibleGlobal(globals: Record<string, unknown>) {
+  return Boolean(globals[OVERLAY_VISIBLE_KEY]);
+}
+
+export function getOverlayOpacityGlobal(globals: Record<string, unknown>) {
+  return (globals[OVERLAY_OPACITY_KEY] as number | undefined) ?? DEFAULT_OVERLAY_OPACITY;
+}
+
 export function getStoryOverlayFilename(storyId: string) {
   return `figma-${storyId.replace(/[^a-zA-Z0-9-_]/g, '-')}.png`;
 }
