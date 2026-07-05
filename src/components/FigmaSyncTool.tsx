@@ -1,6 +1,6 @@
 import { LinkIcon } from '@storybook/icons';
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Form, Modal, PopoverProvider } from 'storybook/internal/components';
+import React, { memo, useCallback, useEffect, useState } from 'react';
+import { Button, Form, PopoverProvider } from 'storybook/internal/components';
 import { useChannel, useGlobals, useStorybookApi } from 'storybook/manager-api';
 
 import {
@@ -12,13 +12,11 @@ import {
   CHANNEL_OVERLAY_READY,
   CHANNEL_REQUEST_SCREENSHOT,
   FIGMA_URL_KEY,
+  getStoryOverlayAssetPath,
   OVERLAY_OPACITY_KEY,
   OVERLAY_VISIBLE_KEY,
 } from '../constants';
-
-function getStoryOverlaySrc(storyId: string) {
-  return `/figma-sync-assets/figma-${storyId}.png`;
-}
+import { AnalysisModal } from './AnalysisModal';
 
 function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -50,7 +48,7 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
     screenshotSrc: string;
     similarity: number;
   } | null>(null);
-  const overlayImageSrc = `${getStoryOverlaySrc(storyId)}?t=${overlayVersion}`;
+  const overlayImageSrc = `${getStoryOverlayAssetPath(storyId)}?t=${overlayVersion}`;
 
   const emit = useChannel({
     [CHANNEL_ANALYSIS_READY]: (payload: { figmaSrc: string; screenshotSrc: string; similarity: number }) => {
@@ -84,23 +82,11 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   });
 
   const [localFigmaUrl, setLocalFigmaUrl] = useState(figmaUrl);
-  const [localShowOverlay, setLocalShowOverlay] = useState(showOverlay);
-  const [localOverlayOpacity, setLocalOverlayOpacity] = useState(overlayOpacity);
-
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync local state when global state changes externally
   useEffect(() => {
     setLocalFigmaUrl(figmaUrl);
   }, [figmaUrl]);
-
-  useEffect(() => {
-    setLocalShowOverlay(showOverlay);
-  }, [showOverlay]);
-
-  useEffect(() => {
-    setLocalOverlayOpacity(overlayOpacity);
-  }, [overlayOpacity]);
 
   useEffect(() => {
     setOverlayVersion(Date.now());
@@ -128,33 +114,9 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   useEffect(() => {
     if (overlayAvailable || !showOverlay) return;
 
-    setLocalShowOverlay(false);
     updateGlobals({ [OVERLAY_VISIBLE_KEY]: false });
     api.setQueryParams({ figmaOverlayVisible: null });
   }, [api, overlayAvailable, showOverlay, updateGlobals]);
-
-  // Clean up timer on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
-
-  const updateGlobalsDebounced = useCallback(
-    (value: number) => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-
-      debounceTimerRef.current = setTimeout(() => {
-        updateGlobals({ [OVERLAY_OPACITY_KEY]: value });
-        api.setQueryParams({ figmaOverlayOpacity: String(Math.round(value * 100)) });
-      }, 150);
-    },
-    [updateGlobals, api],
-  );
 
   // Resize iframe langsung sesuai ukuran gambar Figma (trigger CSS media queries)
   useEffect(() => {
@@ -171,7 +133,6 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
     img.onload = () => {
       iframe.style.width = `${img.naturalWidth}px`;
       iframe.style.height = `${img.naturalHeight}px`;
-      console.log('Figma overlay image loaded:', img.naturalWidth, img.naturalHeight);
     };
     img.src = overlayImageSrc;
   }, [overlayImageSrc, showOverlay]);
@@ -186,23 +147,22 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const handleVisibleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const checked = event.target.checked;
-      setLocalShowOverlay(checked);
       updateGlobals({ [OVERLAY_VISIBLE_KEY]: checked });
       api.setQueryParams({
         figmaOverlayVisible: checked ? '1' : null,
-        figmaOverlayOpacity: checked ? String(localOverlayOpacity) : null,
+        figmaOverlayOpacity: checked ? String(overlayOpacity) : null,
       });
     },
-    [updateGlobals, api, localOverlayOpacity],
+    [api, overlayOpacity, updateGlobals],
   );
 
   const handleOpacityChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const value = Number(event.target.value);
-      setLocalOverlayOpacity(value);
-      updateGlobalsDebounced(value / 100);
+      updateGlobals({ [OVERLAY_OPACITY_KEY]: value / 100 });
+      api.setQueryParams({ figmaOverlayOpacity: String(value) });
     },
-    [updateGlobalsDebounced],
+    [api, updateGlobals],
   );
 
   const handleAnalyze = useCallback(() => {
@@ -258,16 +218,16 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
               </div>
             </Field>
             {overlayAvailable ? (
-              <Field label={`Overlay: ${localShowOverlay ? ` ${Math.round(localOverlayOpacity)}%` : ' Off'}`}>
-                <input type="checkbox" checked={localShowOverlay} onChange={handleVisibleChange} />
+              <Field label={`Overlay: ${showOverlay ? ` ${overlayOpacity}%` : ' Off'}`}>
+                <input type="checkbox" checked={showOverlay} onChange={handleVisibleChange} />
                 <input
                   type="range"
                   min={0}
                   max={100}
                   step={1}
-                  value={localOverlayOpacity}
+                  value={overlayOpacity}
                   onChange={handleOpacityChange}
-                  disabled={!localShowOverlay}
+                  disabled={!showOverlay}
                   style={{ flex: 1, width: '100%' }}
                 />
               </Field>
@@ -318,107 +278,11 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
           <LinkIcon />
         </Button>
       </PopoverProvider>
-      <Modal
-        open={isAnalysisModalOpen}
+      <AnalysisModal
+        isOpen={isAnalysisModalOpen}
+        result={analysisResult}
         onOpenChange={handleAnalysisModalOpenChange}
-        ariaLabel="Figma analysis result"
-        width="100vw"
-        height="100vh"
-      >
-        <div
-          style={{
-            display: 'flex',
-            height: '100%',
-            width: '100%',
-            flexDirection: 'column',
-            background: '#0f1115',
-            color: '#fff',
-          }}
-        >
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr auto 1fr',
-              alignItems: 'center',
-              gap: '16px',
-              padding: '24px 32px 16px',
-              borderBottom: '1px solid rgba(255,255,255,0.08)',
-            }}
-          >
-            <div />
-            <div style={{ fontSize: '24px', fontWeight: 700, textAlign: 'center' }}>
-              {analysisResult ? `Kemiripan ${analysisResult.similarity}%` : 'Analisis'}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleAnalysisModalOpenChange(false)}
-                ariaLabel={false}
-              >
-                Tutup
-              </Button>
-            </div>
-          </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '24px',
-              flex: 1,
-              minHeight: 0,
-              padding: '24px 32px 32px',
-            }}
-          >
-            {analysisResult ? (
-              <>
-                <div style={{ display: 'flex', minHeight: 0, flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.72)' }}>Figma</div>
-                  <div
-                    style={{
-                      flex: 1,
-                      minHeight: 0,
-                      overflow: 'auto',
-                      borderRadius: '12px',
-                      background: '#16191f',
-                      padding: '16px',
-                    }}
-                  >
-                    <img
-                      src={analysisResult.figmaSrc}
-                      alt="Figma overlay"
-                      style={{ display: 'block', width: '100%', height: 'auto', objectFit: 'contain' }}
-                    />
-                  </div>
-                </div>
-                <div style={{ display: 'flex', minHeight: 0, flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.72)' }}>Screenshot</div>
-                  <div
-                    style={{
-                      flex: 1,
-                      minHeight: 0,
-                      overflow: 'auto',
-                      borderRadius: '12px',
-                      background: '#16191f',
-                      padding: '16px',
-                    }}
-                  >
-                    <img
-                      src={analysisResult.screenshotSrc}
-                      alt="Storybook screenshot"
-                      style={{ display: 'block', width: '100%', height: 'auto', objectFit: 'contain' }}
-                    />
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div style={{ gridColumn: '1 / -1', alignSelf: 'center', justifySelf: 'center', color: '#c8ccd4' }}>
-                Hasil analisis belum tersedia.
-              </div>
-            )}
-          </div>
-        </div>
-      </Modal>
+      />
     </>
   );
 });

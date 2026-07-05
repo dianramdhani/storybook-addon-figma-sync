@@ -13,6 +13,7 @@ import {
   CHANNEL_REQUEST_SCREENSHOT,
   CHANNEL_SAVE_SCREENSHOT,
   FIGMA_URL_KEY,
+  getStoryOverlayAssetPath,
   OVERLAY_OPACITY_KEY,
   OVERLAY_VISIBLE_KEY,
 } from './constants';
@@ -34,15 +35,10 @@ function getInitialGlobalsFromUrl(): Record<string, unknown> {
 }
 
 const urlGlobals = getInitialGlobalsFromUrl();
-
-function getStoryOverlaySrc(storyId: string) {
-  return `/figma-sync-assets/figma-${storyId}.png`;
-}
-
 async function getOverlayDimensions(storyId?: string | null) {
   if (!storyId) return null;
 
-  const overlaySrc = getStoryOverlaySrc(storyId);
+  const overlaySrc = getStoryOverlayAssetPath(storyId);
 
   return await new Promise<{ width: number; height: number } | null>((resolve) => {
     const img = new Image();
@@ -90,7 +86,7 @@ channel.on(
 );
 
 const withOverlay = (StoryFn: StoryFunction<Renderer>, context: StoryContext<Renderer>) => {
-  const overlaySrc = getStoryOverlaySrc(context.id);
+  const overlaySrc = getStoryOverlayAssetPath(context.id);
   const isVisible = Boolean(context.globals[OVERLAY_VISIBLE_KEY]);
   const overlayOpacity = (context.globals[OVERLAY_OPACITY_KEY] as number | undefined) ?? 0.5;
 

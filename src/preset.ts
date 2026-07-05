@@ -14,6 +14,10 @@ import {
   CHANNEL_OVERLAY_ERROR,
   CHANNEL_OVERLAY_READY,
   CHANNEL_SAVE_SCREENSHOT,
+  getScreenshotAssetPath,
+  getScreenshotFilename,
+  getStoryOverlayAssetPath,
+  getStoryOverlayFilename,
 } from './constants';
 
 const FIGMA_STATIC_DIR = path.join(process.cwd(), '.storybook', '.storybook-addon-sync-figma');
@@ -22,16 +26,6 @@ const DEFAULT_ENV_LOCATION = '../.env';
 interface FigmaSyncAddonOptions {
   envLocation?: string;
 }
-
-export const viteFinal = async (config: unknown) => {
-  console.log('This addon is augmenting the Vite config');
-  return config;
-};
-
-export const webpack = async (config: unknown) => {
-  console.log('This addon is augmenting the Webpack config');
-  return config;
-};
 
 function ensureStaticDir() {
   if (!fs.existsSync(FIGMA_STATIC_DIR)) fs.mkdirSync(FIGMA_STATIC_DIR, { recursive: true });
@@ -98,25 +92,20 @@ async function downloadFile(url: string, filePath: string) {
   fs.writeFileSync(filePath, Buffer.from(arrayBuffer));
 }
 
-function getOverlayFilename(storyId: string) {
-  const safeStoryId = storyId.replace(/[^a-zA-Z0-9-_]/g, '-');
-  return `figma-${safeStoryId}.png`;
-}
-
 function getOverlayFilePath(storyId: string) {
-  return path.join(FIGMA_STATIC_DIR, getOverlayFilename(storyId));
+  return path.join(FIGMA_STATIC_DIR, getStoryOverlayFilename(storyId));
 }
 
 function getOverlayAssetUrl(storyId: string, version: number) {
-  return `/figma-sync-assets/${getOverlayFilename(storyId)}?t=${version}`;
+  return `${getStoryOverlayAssetPath(storyId)}?t=${version}`;
 }
 
 function getScreenshotAssetUrl(version: number) {
-  return `/figma-sync-assets/ss.png?t=${version}`;
+  return `${getScreenshotAssetPath()}?t=${version}`;
 }
 
 function getScreenshotFilePath() {
-  return path.join(FIGMA_STATIC_DIR, 'ss.png');
+  return path.join(FIGMA_STATIC_DIR, getScreenshotFilename());
 }
 
 async function downloadOverlayFromFigma(figmaUrl: string, storyId: string, options: FigmaSyncAddonOptions = {}) {
@@ -194,7 +183,6 @@ export const experimental_serverChannel = (channel: Channel, options: FigmaSyncA
         ensureStaticDir();
         const filePath = getScreenshotFilePath();
         fs.writeFileSync(filePath, buffer);
-        console.log(`[Figma Sync] Screenshot saved successfully to ${filePath}`);
 
         if (data.purpose === 'analyze' && data.storyId) {
           const result = analyzeSavedImages(data.storyId);
@@ -216,7 +204,6 @@ export const experimental_serverChannel = (channel: Channel, options: FigmaSyncA
       channel.emit(CHANNEL_OVERLAY_READY, {
         figmaUrl: data.figmaUrl,
       });
-      console.log(`[Figma Sync] Overlay downloaded successfully from ${data.figmaUrl}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error while downloading Figma overlay';
       channel.emit(CHANNEL_OVERLAY_ERROR, { message });
@@ -229,7 +216,6 @@ export const experimental_serverChannel = (channel: Channel, options: FigmaSyncA
       const screenshotPath = getScreenshotFilePath();
       if (fs.existsSync(screenshotPath)) {
         fs.unlinkSync(screenshotPath);
-        console.log(`[Figma Sync] Screenshot deleted successfully from ${screenshotPath}`);
       }
     } catch (err) {
       console.error('[Figma Sync] Failed to delete screenshot:', err);
