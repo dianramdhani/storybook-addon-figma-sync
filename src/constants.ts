@@ -1,4 +1,4 @@
-export const ADDON_ID = 'storybook-addon-sync-figma';
+export const ADDON_ID = 'storybook-addon-figma-sync';
 export const KEY = ADDON_ID;
 export const FIGMA_URL_KEY = `${ADDON_ID}/figma-url`;
 export const OVERLAY_VISIBLE_KEY = `${ADDON_ID}/overlay-visible`;

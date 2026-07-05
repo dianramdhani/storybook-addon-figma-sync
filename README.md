@@ -71,7 +71,7 @@ To get started, replace this README with the content in this sample template.
 First, install the package.
 
 ```sh
-yarn add --dev storybook-addon-sync-figma
+yarn add --dev storybook-addon-figma-sync
 ```
 
 Then, register it as an addon in `.storybook/main.js`.
@@ -86,7 +86,7 @@ const config: StorybookConfig = {
   // ...rest of config
   addons: [
     '@storybook/addon-docs'
-    'storybook-addon-sync-figma', // 👈 register the addon here
+    'storybook-addon-figma-sync', // 👈 register the addon here
   ],
 };
 
@@ -151,9 +151,9 @@ const config: StorybookConfig = {
   addons: [
     '@storybook/addon-docs',
     {
-      name: 'storybook-addon-sync-figma',
+      name: 'storybook-addon-figma-sync',
       options: {
-        // 👈 options for storybook-addon-sync-figma go here
+        // 👈 options for storybook-addon-figma-sync go here
       },
     },
   ],
