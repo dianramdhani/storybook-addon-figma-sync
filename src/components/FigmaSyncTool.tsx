@@ -12,13 +12,16 @@ import {
   CHANNEL_OVERLAY_ERROR,
   CHANNEL_OVERLAY_READY,
   CHANNEL_REQUEST_SCREENSHOT,
+  DEFAULT_FIGMA_URL,
+  DEFAULT_OVERLAY_OPACITY,
   FIGMA_URL_KEY,
   type FigmaSyncErrorPayload,
-  getStoryOverlayAssetPath,
+  getVersionedStoryOverlayAssetPath,
   OVERLAY_OPACITY_KEY,
   OVERLAY_VISIBLE_KEY,
   type OverlayReadyPayload,
   type RequestScreenshotPayload,
+  STORYBOOK_PREVIEW_IFRAME_SELECTOR,
   URL_PARAM_OVERLAY_OPACITY,
   URL_PARAM_OVERLAY_VISIBLE,
 } from '../constants';
@@ -36,11 +39,13 @@ function Field({ label, children }: { label: React.ReactNode; children: React.Re
 export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const [globals, updateGlobals] = useGlobals();
   const api = useStorybookApi();
-  const storyId = api.getCurrentStoryData()?.id || '';
+  const storyId = api.getCurrentStoryData()?.id ?? '';
 
-  const figmaUrl = (globals[FIGMA_URL_KEY] as string) || '';
+  const figmaUrl = (globals[FIGMA_URL_KEY] as string) ?? DEFAULT_FIGMA_URL;
   const showOverlay = Boolean(globals[OVERLAY_VISIBLE_KEY]);
-  const overlayOpacity = Math.round(((globals[OVERLAY_OPACITY_KEY] as number | undefined) ?? 0.5) * 100);
+  const overlayOpacity = Math.round(
+    ((globals[OVERLAY_OPACITY_KEY] as number | undefined) ?? DEFAULT_OVERLAY_OPACITY) * 100,
+  );
   const [fetchState, setFetchState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [fetchMessage, setFetchMessage] = useState('');
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
@@ -50,7 +55,16 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const [analysisState, setAnalysisState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [analysisMessage, setAnalysisMessage] = useState('');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const overlayImageSrc = `${getStoryOverlayAssetPath(storyId)}?t=${overlayVersion}`;
+  const overlayImageSrc = getVersionedStoryOverlayAssetPath(storyId, overlayVersion);
+
+  const loadImage = useCallback((src: string) => {
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+      image.src = src;
+    });
+  }, []);
 
   const emit = useChannel({
     [CHANNEL_ANALYSIS_READY]: (payload: AnalysisResult) => {
@@ -96,22 +110,18 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
 
   useEffect(() => {
     let isCancelled = false;
-    const img = new Image();
-
-    img.onload = () => {
-      if (!isCancelled) setOverlayAvailable(true);
-    };
-
-    img.onerror = () => {
-      if (!isCancelled) setOverlayAvailable(false);
-    };
-
-    img.src = overlayImageSrc;
+    loadImage(overlayImageSrc)
+      .then(() => {
+        if (!isCancelled) setOverlayAvailable(true);
+      })
+      .catch(() => {
+        if (!isCancelled) setOverlayAvailable(false);
+      });
 
     return () => {
       isCancelled = true;
     };
-  }, [overlayImageSrc]);
+  }, [loadImage, overlayImageSrc]);
 
   useEffect(() => {
     if (overlayAvailable || !showOverlay) return;
@@ -122,7 +132,7 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
 
   // Resize iframe langsung sesuai ukuran gambar Figma (trigger CSS media queries)
   useEffect(() => {
-    const iframe = document.querySelector('#storybook-preview-iframe') as HTMLElement | null;
+    const iframe = document.querySelector(STORYBOOK_PREVIEW_IFRAME_SELECTOR) as HTMLElement | null;
     if (!iframe) return;
 
     if (!showOverlay || !overlayImageSrc) {
@@ -131,18 +141,21 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
       return;
     }
 
-    const img = new Image();
-    img.onload = () => {
-      iframe.style.width = `${img.naturalWidth}px`;
-      iframe.style.height = `${img.naturalHeight}px`;
-    };
-    img.src = overlayImageSrc;
+    loadImage(overlayImageSrc)
+      .then((image) => {
+        iframe.style.width = `${image.naturalWidth}px`;
+        iframe.style.height = `${image.naturalHeight}px`;
+      })
+      .catch(() => {
+        iframe.style.width = '';
+        iframe.style.height = '';
+      });
 
     return () => {
       iframe.style.width = '';
       iframe.style.height = '';
     };
-  }, [overlayImageSrc, showOverlay]);
+  }, [loadImage, overlayImageSrc, showOverlay]);
 
   const handleSubmit = useCallback(() => {
     setFetchState('loading');

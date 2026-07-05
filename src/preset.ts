@@ -17,10 +17,10 @@ import {
   CHANNEL_SAVE_SCREENSHOT,
   type FetchOverlayPayload,
   type FigmaSyncErrorPayload,
-  getScreenshotAssetPath,
   getScreenshotFilename,
-  getStoryOverlayAssetPath,
   getStoryOverlayFilename,
+  getVersionedScreenshotAssetPath,
+  getVersionedStoryOverlayAssetPath,
   type SaveScreenshotPayload,
 } from './constants';
 
@@ -101,11 +101,11 @@ function getOverlayFilePath(storyId: string) {
 }
 
 function getOverlayAssetUrl(storyId: string, version: number) {
-  return `${getStoryOverlayAssetPath(storyId)}?t=${version}`;
+  return getVersionedStoryOverlayAssetPath(storyId, version);
 }
 
 function getScreenshotAssetUrl(version: number) {
-  return `${getScreenshotAssetPath()}?t=${version}`;
+  return getVersionedScreenshotAssetPath(version);
 }
 
 function getScreenshotFilePath() {

@@ -6,6 +6,10 @@ export const OVERLAY_OPACITY_KEY = `${ADDON_ID}/overlay-opacity`;
 export const FIGMA_STATIC_ASSET_BASE = '/figma-sync-assets';
 export const URL_PARAM_OVERLAY_VISIBLE = 'figmaOverlayVisible';
 export const URL_PARAM_OVERLAY_OPACITY = 'figmaOverlayOpacity';
+export const DEFAULT_FIGMA_URL = '';
+export const DEFAULT_OVERLAY_VISIBLE = false;
+export const DEFAULT_OVERLAY_OPACITY = 0.5;
+export const STORYBOOK_PREVIEW_IFRAME_SELECTOR = '#storybook-preview-iframe';
 
 export const CHANNEL_REQUEST_SCREENSHOT = `${ADDON_ID}/request-screenshot`;
 export const CHANNEL_SAVE_SCREENSHOT = `${ADDON_ID}/save-screenshot`;
@@ -48,6 +52,12 @@ export interface AnalysisResult {
   similarity: number;
 }
 
+export interface FigmaSyncGlobals {
+  [FIGMA_URL_KEY]: string;
+  [OVERLAY_VISIBLE_KEY]: boolean;
+  [OVERLAY_OPACITY_KEY]: number;
+}
+
 export function getStoryOverlayFilename(storyId: string) {
   return `figma-${storyId.replace(/[^a-zA-Z0-9-_]/g, '-')}.png`;
 }
@@ -56,10 +66,18 @@ export function getStoryOverlayAssetPath(storyId: string) {
   return `${FIGMA_STATIC_ASSET_BASE}/${getStoryOverlayFilename(storyId)}`;
 }
 
+export function getVersionedStoryOverlayAssetPath(storyId: string, version: number) {
+  return `${getStoryOverlayAssetPath(storyId)}?t=${version}`;
+}
+
 export function getScreenshotFilename() {
   return 'ss.png';
 }
 
 export function getScreenshotAssetPath() {
   return `${FIGMA_STATIC_ASSET_BASE}/${getScreenshotFilename()}`;
+}
+
+export function getVersionedScreenshotAssetPath(version: number) {
+  return `${getScreenshotAssetPath()}?t=${version}`;
 }

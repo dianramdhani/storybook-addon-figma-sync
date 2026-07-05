@@ -12,8 +12,12 @@ import {
   CHANNEL_ANALYSIS_ERROR,
   CHANNEL_REQUEST_SCREENSHOT,
   CHANNEL_SAVE_SCREENSHOT,
+  DEFAULT_FIGMA_URL,
+  DEFAULT_OVERLAY_OPACITY,
+  DEFAULT_OVERLAY_VISIBLE,
   FIGMA_URL_KEY,
   type FigmaSyncErrorPayload,
+  type FigmaSyncGlobals,
   getStoryOverlayAssetPath,
   OVERLAY_OPACITY_KEY,
   OVERLAY_VISIBLE_KEY,
@@ -23,9 +27,9 @@ import {
   URL_PARAM_OVERLAY_VISIBLE,
 } from './constants';
 
-function getInitialGlobalsFromUrl(): Record<string, unknown> {
+function getInitialGlobalsFromUrl(): Partial<FigmaSyncGlobals> {
   const params = new URLSearchParams(window.location.search);
-  const updates: Record<string, unknown> = {};
+  const updates: Partial<FigmaSyncGlobals> = {};
   const visibleParam = params.get(URL_PARAM_OVERLAY_VISIBLE);
   const opacityParam = params.get(URL_PARAM_OVERLAY_OPACITY);
   if (visibleParam !== null) updates[OVERLAY_VISIBLE_KEY] = visibleParam === '1';
@@ -93,7 +97,7 @@ channel.on(CHANNEL_REQUEST_SCREENSHOT, async (payload?: RequestScreenshotPayload
 const withOverlay = (StoryFn: StoryFunction<Renderer>, context: StoryContext<Renderer>) => {
   const overlaySrc = getStoryOverlayAssetPath(context.id);
   const isVisible = Boolean(context.globals[OVERLAY_VISIBLE_KEY]);
-  const overlayOpacity = (context.globals[OVERLAY_OPACITY_KEY] as number | undefined) ?? 0.5;
+  const overlayOpacity = (context.globals[OVERLAY_OPACITY_KEY] as number | undefined) ?? DEFAULT_OVERLAY_OPACITY;
 
   if (!overlaySrc || !isVisible) return StoryFn();
 
@@ -122,23 +126,23 @@ const preview: ProjectAnnotations<Renderer> = {
     [FIGMA_URL_KEY]: {
       name: 'Figma URL',
       description: 'Shared Figma file URL for the addon panel',
-      defaultValue: '',
+      defaultValue: DEFAULT_FIGMA_URL,
     },
     [OVERLAY_VISIBLE_KEY]: {
       name: 'Overlay visible',
       description: 'Show or hide the overlay image',
-      defaultValue: false,
+      defaultValue: DEFAULT_OVERLAY_VISIBLE,
     },
     [OVERLAY_OPACITY_KEY]: {
       name: 'Overlay opacity',
       description: 'Opacity of the overlay image',
-      defaultValue: 0.5,
+      defaultValue: DEFAULT_OVERLAY_OPACITY,
     },
   },
   initialGlobals: {
-    [FIGMA_URL_KEY]: '',
-    [OVERLAY_VISIBLE_KEY]: false,
-    [OVERLAY_OPACITY_KEY]: 0.5,
+    [FIGMA_URL_KEY]: DEFAULT_FIGMA_URL,
+    [OVERLAY_VISIBLE_KEY]: DEFAULT_OVERLAY_VISIBLE,
+    [OVERLAY_OPACITY_KEY]: DEFAULT_OVERLAY_OPACITY,
     ...urlGlobals,
   },
   decorators: [withOverlay],
