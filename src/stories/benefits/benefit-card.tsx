@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/stories/ui/card';
 
 export interface CardData {
   title: string;

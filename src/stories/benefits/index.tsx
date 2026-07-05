@@ -1,6 +1,6 @@
 import { Map, MonitorDot, Scaling, Sparkles, TrendingDown, Zap } from 'lucide-react';
 
-import { SectionHeading } from '@/components/section-heading';
+import { SectionHeading } from '@/stories/section-heading';
 
 import { BenefitCard, type CardData } from './benefit-card';
 

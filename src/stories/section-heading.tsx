@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/stories/ui/badge';
 
 export interface SectionHeadingProps {
   icon?: ComponentType<{ className?: string; size?: number }>;
