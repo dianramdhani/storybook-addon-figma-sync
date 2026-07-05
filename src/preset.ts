@@ -1,7 +1,7 @@
-// You can use presets to augment the Storybook configuration
-// You rarely want to do this in addons,
-// so often you want to delete this file and remove the reference to it in package.json#exports and package.json#bunder.nodeEntries
-// Read more about presets at https://storybook.js.org/docs/addons/writing-presets
+import fs from 'node:fs';
+import path from 'node:path';
+
+import type { Channel } from 'storybook/internal/channels';
 
 export const viteFinal = async (config: unknown) => {
   console.log('This addon is augmenting the Vite config');
@@ -11,4 +11,24 @@ export const viteFinal = async (config: unknown) => {
 export const webpack = async (config: unknown) => {
   console.log('This addon is augmenting the Webpack config');
   return config;
+};
+
+export const experimental_serverChannel = (channel: Channel) => {
+  channel.on('figma-sync/save-screenshot', (data: { image: string }) => {
+    try {
+      const base64Data = data.image.replace(/^data:image\/png;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      const dirPath = path.join(process.cwd(), '.storybook', '.storybook-addon-sync-figma');
+      if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
+
+      const filePath = path.join(dirPath, 'ss.png');
+      fs.writeFileSync(filePath, buffer);
+      console.log(`[Figma Sync] Screenshot saved successfully to ${filePath}`);
+    } catch (err) {
+      console.error('[Figma Sync] Failed to save screenshot:', err);
+    }
+  });
+
+  return channel;
 };

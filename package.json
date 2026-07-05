@@ -122,5 +122,8 @@
     ],
     "icon": "https://segosambel-poc-bucket.s3.ap-southeast-3.amazonaws.com/sentri/sentri-logo.png"
   },
-  "packageManager": "yarn@1.22.22"
+  "packageManager": "yarn@1.22.22",
+  "dependencies": {
+    "html-to-image": "^1.11.13"
+  }
 }

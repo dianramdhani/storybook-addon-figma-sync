@@ -1,4 +1,6 @@
+import { toPng } from 'html-to-image';
 import { createElement } from 'react';
+import { addons } from 'storybook/internal/preview-api';
 import type {
   PartialStoryFn as StoryFunction,
   ProjectAnnotations,
@@ -7,6 +9,26 @@ import type {
 } from 'storybook/internal/types';
 
 import { KEY, OVERLAY_OPACITY_KEY, OVERLAY_VISIBLE_KEY } from './constants';
+
+const channel = addons.getChannel();
+channel.on('figma-sync/request-screenshot', async () => {
+  if (!document) return;
+  const element = document.getElementById('storybook-root') || document.body;
+  try {
+    const dataUrl = await toPng(element, {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      filter: (node) => {
+        if (node instanceof HTMLElement && node.getAttribute('data-figma-sync-ignore') === 'true') return false;
+        return true;
+      },
+      cacheBust: true,
+    });
+    channel.emit('figma-sync/save-screenshot', { image: dataUrl });
+  } catch (error) {
+    console.error('[Figma Sync] Failed to take screenshot:', error);
+  }
+});
 
 const URL_PARAM_OVERLAY_VISIBLE = 'figmaOverlayVisible';
 const URL_PARAM_OVERLAY_OPACITY = 'figmaOverlayOpacity';
@@ -41,6 +63,7 @@ const withOverlay = (StoryFn: StoryFunction<Renderer>, context: StoryContext<Ren
       src: overlaySrc,
       alt: '',
       'aria-hidden': true,
+      'data-figma-sync-ignore': 'true',
       style: {
         position: 'absolute',
         inset: 0,

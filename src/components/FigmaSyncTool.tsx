@@ -1,7 +1,7 @@
 import { LinkIcon } from '@storybook/icons';
 import React, { memo, useCallback, useEffect } from 'react';
 import { Button, Form, IconButton, WithTooltip } from 'storybook/internal/components';
-import { useGlobals, useParameter, useStorybookApi } from 'storybook/manager-api';
+import { useChannel, useGlobals, useParameter, useStorybookApi } from 'storybook/manager-api';
 
 import { FIGMA_URL_KEY, OVERLAY_OPACITY_KEY, OVERLAY_VISIBLE_KEY } from '../constants';
 
@@ -17,6 +17,7 @@ function Field({ label, children }: { label: React.ReactNode; children: React.Re
 export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const [globals, updateGlobals] = useGlobals();
   const api = useStorybookApi();
+  const emit = useChannel({});
   const figmaOverlaySrc = useParameter<string | undefined>('figmaOverlaySrc');
   const figmaUrl = (globals[FIGMA_URL_KEY] as string) || '';
   const showOverlay = Boolean(globals[OVERLAY_VISIBLE_KEY]);
@@ -37,13 +38,15 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
     img.onload = () => {
       iframe.style.width = `${img.naturalWidth}px`;
       iframe.style.height = `${img.naturalHeight}px`;
+      console.log('Figma overlay image loaded:', img.naturalWidth, img.naturalHeight);
     };
     img.src = figmaOverlaySrc;
   }, [showOverlay, figmaOverlaySrc]);
 
   const handleSubmit = useCallback(() => {
     updateGlobals({ [FIGMA_URL_KEY]: figmaUrl });
-  }, [figmaUrl, updateGlobals]);
+    emit('figma-sync/request-screenshot');
+  }, [figmaUrl, updateGlobals, emit]);
 
   const handleVisibleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
