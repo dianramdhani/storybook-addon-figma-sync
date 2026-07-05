@@ -1,4 +1,5 @@
 import { Map, MonitorDot, Scaling, Sparkles, TrendingDown, Zap } from 'lucide-react';
+import React from 'react';
 
 import { SectionHeading } from '@/stories/section-heading';
 
