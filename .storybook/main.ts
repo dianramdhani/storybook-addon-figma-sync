@@ -5,7 +5,7 @@ import { mergeConfig } from 'vite';
 const config = defineMain({
   stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|ts|tsx)'],
   addons: ['@storybook/addon-docs', import.meta.resolve('./local-preset.ts')],
-  staticDirs: [{ from: './.storybook-addon-figma-sync', to: '/figma-sync-assets' }],
+  staticDirs: [{ from: './.storybook-addon-sync-figma', to: '/figma-sync-assets' }],
   framework: '@storybook/react-vite',
   viteFinal: async (viteConfig) =>
     mergeConfig(viteConfig, {

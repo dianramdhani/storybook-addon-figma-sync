@@ -19,7 +19,7 @@ export const experimental_serverChannel = (channel: Channel) => {
       const base64Data = data.image.replace(/^data:image\/png;base64,/, '');
       const buffer = Buffer.from(base64Data, 'base64');
 
-      const dirPath = path.join(process.cwd(), '.storybook', '.storybook-addon-figma-sync');
+      const dirPath = path.join(process.cwd(), '.storybook', '.storybook-addon-sync-figma');
       if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
 
       const filePath = path.join(dirPath, 'ss.png');
