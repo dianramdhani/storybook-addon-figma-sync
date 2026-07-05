@@ -1,6 +1,6 @@
 import { LinkIcon } from '@storybook/icons';
-import React, { memo, useCallback, useEffect } from 'react';
-import { Button, Form, IconButton, WithTooltip } from 'storybook/internal/components';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { Button, Form, WithTooltip } from 'storybook/internal/components';
 import { useChannel, useGlobals, useParameter, useStorybookApi } from 'storybook/manager-api';
 
 import { FIGMA_URL_KEY, OVERLAY_OPACITY_KEY, OVERLAY_VISIBLE_KEY } from '../constants';
@@ -19,9 +19,52 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const api = useStorybookApi();
   const emit = useChannel({});
   const figmaOverlaySrc = useParameter<string | undefined>('figmaOverlaySrc');
+
   const figmaUrl = (globals[FIGMA_URL_KEY] as string) || '';
   const showOverlay = Boolean(globals[OVERLAY_VISIBLE_KEY]);
   const overlayOpacity = Math.round(((globals[OVERLAY_OPACITY_KEY] as number | undefined) ?? 0.5) * 100);
+
+  const [localFigmaUrl, setLocalFigmaUrl] = useState(figmaUrl);
+  const [localShowOverlay, setLocalShowOverlay] = useState(showOverlay);
+  const [localOverlayOpacity, setLocalOverlayOpacity] = useState(overlayOpacity);
+
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync local state when global state changes externally
+  useEffect(() => {
+    setLocalFigmaUrl(figmaUrl);
+  }, [figmaUrl]);
+
+  useEffect(() => {
+    setLocalShowOverlay(showOverlay);
+  }, [showOverlay]);
+
+  useEffect(() => {
+    setLocalOverlayOpacity(overlayOpacity);
+  }, [overlayOpacity]);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  const updateGlobalsDebounced = useCallback(
+    (value: number) => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+
+      debounceTimerRef.current = setTimeout(() => {
+        updateGlobals({ [OVERLAY_OPACITY_KEY]: value });
+        api.setQueryParams({ figmaOverlayOpacity: String(Math.round(value * 100)) });
+      }, 150);
+    },
+    [updateGlobals, api],
+  );
 
   // Resize iframe langsung sesuai ukuran gambar Figma (trigger CSS media queries)
   useEffect(() => {
@@ -44,29 +87,30 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   }, [showOverlay, figmaOverlaySrc]);
 
   const handleSubmit = useCallback(() => {
-    updateGlobals({ [FIGMA_URL_KEY]: figmaUrl });
+    updateGlobals({ [FIGMA_URL_KEY]: localFigmaUrl });
     emit('figma-sync/request-screenshot');
-  }, [figmaUrl, updateGlobals, emit]);
+  }, [localFigmaUrl, updateGlobals, emit]);
 
   const handleVisibleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const checked = event.target.checked;
+      setLocalShowOverlay(checked);
       updateGlobals({ [OVERLAY_VISIBLE_KEY]: checked });
       api.setQueryParams({
         figmaOverlayVisible: checked ? '1' : null,
-        figmaOverlayOpacity: checked ? String(overlayOpacity) : null,
+        figmaOverlayOpacity: checked ? String(localOverlayOpacity) : null,
       });
     },
-    [updateGlobals, api, overlayOpacity],
+    [updateGlobals, api, localOverlayOpacity],
   );
 
   const handleOpacityChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const value = Number(event.target.value) / 100;
-      updateGlobals({ [OVERLAY_OPACITY_KEY]: value });
-      api.setQueryParams({ figmaOverlayOpacity: String(Math.round(value * 100)) });
+      const value = Number(event.target.value);
+      setLocalOverlayOpacity(value);
+      updateGlobalsDebounced(value / 100);
     },
-    [updateGlobals, api],
+    [updateGlobalsDebounced],
   );
 
   return (
@@ -74,6 +118,7 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
       placement="bottom"
       trigger="click"
       closeOnOutsideClick
+      aria-label="Figma Sync settings popover"
       tooltip={() => (
         <div
           style={{
@@ -89,33 +134,33 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
                 id="figma-url-input"
                 type="text"
                 placeholder="https://www.figma.com/file/..."
-                value={figmaUrl}
-                onChange={(e) => updateGlobals({ [FIGMA_URL_KEY]: e.target.value })}
+                value={localFigmaUrl}
+                onChange={(e) => setLocalFigmaUrl(e.target.value)}
               />
-              <Button type="button" onClick={handleSubmit} style={{ height: '100%' }}>
+              <Button type="button" onClick={handleSubmit} style={{ height: '100%' }} ariaLabel={false}>
                 Submit
               </Button>
             </div>
           </Field>
-          <Field label={`Overlay: ${showOverlay ? ` ${Math.round(overlayOpacity)}%` : ' Off'}`}>
-            <input type="checkbox" checked={showOverlay} onChange={handleVisibleChange} />
+          <Field label={`Overlay: ${localShowOverlay ? ` ${Math.round(localOverlayOpacity)}%` : ' Off'}`}>
+            <input type="checkbox" checked={localShowOverlay} onChange={handleVisibleChange} />
             <input
               type="range"
               min={0}
               max={100}
               step={1}
-              value={overlayOpacity}
+              value={localOverlayOpacity}
               onChange={handleOpacityChange}
-              disabled={!showOverlay}
+              disabled={!localShowOverlay}
               style={{ flex: 1, width: '100%' }}
             />
           </Field>
         </div>
       )}
     >
-      <IconButton variant="ghost" title="Figma Sync" active={!!globals[FIGMA_URL_KEY]}>
+      <Button variant={globals[FIGMA_URL_KEY] ? 'outline' : 'ghost'} title="Figma Sync" ariaLabel="Figma Sync Settings">
         <LinkIcon />
-      </IconButton>
+      </Button>
     </WithTooltip>
   );
 });

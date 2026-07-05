@@ -8,7 +8,7 @@ import type {
   StoryContext,
 } from 'storybook/internal/types';
 
-import { KEY, OVERLAY_OPACITY_KEY, OVERLAY_VISIBLE_KEY } from './constants';
+import { FIGMA_URL_KEY, KEY, OVERLAY_OPACITY_KEY, OVERLAY_VISIBLE_KEY } from './constants';
 
 const channel = addons.getChannel();
 channel.on('figma-sync/request-screenshot', async () => {
@@ -77,7 +77,7 @@ const withOverlay = (StoryFn: StoryFunction<Renderer>, context: StoryContext<Ren
 
 const preview: ProjectAnnotations<Renderer> = {
   globalTypes: {
-    figmaUrl: {
+    [FIGMA_URL_KEY]: {
       name: 'Figma URL',
       description: 'Shared Figma file URL for the addon panel',
       defaultValue: '',
@@ -95,6 +95,7 @@ const preview: ProjectAnnotations<Renderer> = {
   },
   initialGlobals: {
     [KEY]: false,
+    [FIGMA_URL_KEY]: '',
     [OVERLAY_VISIBLE_KEY]: false,
     [OVERLAY_OPACITY_KEY]: 0.5,
     ...urlGlobals,
