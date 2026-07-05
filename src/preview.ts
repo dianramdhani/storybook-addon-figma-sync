@@ -29,6 +29,7 @@ import {
   URL_PARAM_OVERLAY_OPACITY,
   URL_PARAM_OVERLAY_VISIBLE,
 } from './constants';
+import { loadImage } from './lib/load-image';
 
 interface OverlayDimensions {
   width: number;
@@ -52,13 +53,12 @@ const urlGlobals = getInitialGlobalsFromUrl();
 
 async function getOverlayDimensions(storyId?: string | null) {
   if (!storyId) return null;
-
-  return new Promise<OverlayDimensions | null>((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    img.onerror = () => resolve(null);
-    img.src = getVersionedStoryOverlayAssetPath(storyId, Date.now());
-  });
+  try {
+    const image = await loadImage(getVersionedStoryOverlayAssetPath(storyId, Date.now()));
+    return { width: image.naturalWidth, height: image.naturalHeight };
+  } catch {
+    return null;
+  }
 }
 
 function getCaptureDimensions(overlayDimensions: OverlayDimensions | null): OverlayDimensions {

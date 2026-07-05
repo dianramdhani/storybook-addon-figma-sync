@@ -1,15 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { STORYBOOK_PREVIEW_IFRAME_SELECTOR } from '../constants';
-
-function loadImage(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(`Failed to load image: ${src}`));
-    image.src = src;
-  });
-}
+import { loadImage } from '../lib/load-image';
 
 export function useOverlayAvailability(src: string) {
   const [isAvailable, setIsAvailable] = useState(false);
