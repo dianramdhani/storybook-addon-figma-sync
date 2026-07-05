@@ -4,12 +4,12 @@ Addon Storybook untuk membantu sync figma
 
 ### Development scripts
 
-- `npm run start` runs babel in watch mode and starts Storybook
-- `npm run build` build and package your addon code
+- `yarn start` runs babel in watch mode and starts Storybook
+- `yarn build` build and package your addon code
 
 ### Switch from TypeScript to JavaScript
 
-Don't want to use TypeScript? We offer a handy eject command: `npm run eject-ts`
+Don't want to use TypeScript? We offer a handy eject command: `yarn eject-ts`
 
 This will convert all code to JS. It is a destructive process, so we recommended running this before you start writing any code.
 
@@ -53,7 +53,7 @@ An exception to this rule is if you are using React to inject UI into the previe
 
 ### Metadata
 
-Storybook addons are listed in the [catalog](https://storybook.js.org/addons) and distributed via npm. The catalog is populated by querying npm's registry for Storybook-specific metadata in `package.json`. This project has been configured with sample data. Learn more about available options in the [Addon metadata docs](https://storybook.js.org/docs/react/addons/addon-catalog#addon-metadata).
+Storybook addons are listed in the [catalog](https://storybook.js.org/addons) and distributed through package registries. The catalog is populated by querying registry metadata in `package.json`. This project has been configured with sample data. Learn more about available options in the [Addon metadata docs](https://storybook.js.org/docs/react/addons/addon-catalog#addon-metadata).
 
 ## Documentation
 
@@ -71,7 +71,7 @@ To get started, replace this README with the content in this sample template.
 First, install the package.
 
 ```sh
-npm install --save-dev my-addon
+yarn add --dev my-addon
 ```
 
 Then, register it as an addon in `.storybook/main.js`.
@@ -99,7 +99,7 @@ The primary way to use this addon is to define the `exampleParameter` parameter.
 component level, as below, to affect all stories in the file, or you can do it for a single story.
 
 ```ts
-// Button.stories.ts
+// Benefits.stories.tsx
 
 // Replace your-framework with the name of your framework
 import type { Meta } from '@storybook/your-framework';
@@ -196,7 +196,7 @@ NPM_TOKEN=<value you just got from npm>
 Lastly, **create labels on GitHub**. You’ll use these labels in the future when making changes to the package.
 
 ```bash
-npx auto create-labels
+yarn auto create-labels
 ```
 
 If you check on GitHub, you’ll now see a set of labels that `auto` would like you to use. Use these to tag future pull requests.
@@ -212,7 +212,7 @@ Go to `Settings > Secrets`, click `New repository secret`, and add your `NPM_TOK
 To create a release locally you can run the following command, otherwise the GitHub action will make the release for you.
 
 ```sh
-npm run release
+yarn release
 ```
 
 That will:
