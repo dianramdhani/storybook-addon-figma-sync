@@ -1,7 +1,7 @@
 import { LinkIcon } from '@storybook/icons';
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useEffect } from 'react';
 import { Button, Form, IconButton, WithTooltip } from 'storybook/internal/components';
-import { useGlobals, useStorybookApi } from 'storybook/manager-api';
+import { useGlobals, useParameter, useStorybookApi } from 'storybook/manager-api';
 
 import { FIGMA_URL_KEY, OVERLAY_OPACITY_KEY, OVERLAY_VISIBLE_KEY } from '../constants';
 
@@ -17,9 +17,29 @@ function Field({ label, children }: { label: React.ReactNode; children: React.Re
 export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const [globals, updateGlobals] = useGlobals();
   const api = useStorybookApi();
+  const figmaOverlaySrc = useParameter<string | undefined>('figmaOverlaySrc');
   const figmaUrl = (globals[FIGMA_URL_KEY] as string) || '';
   const showOverlay = Boolean(globals[OVERLAY_VISIBLE_KEY]);
   const overlayOpacity = Math.round(((globals[OVERLAY_OPACITY_KEY] as number | undefined) ?? 0.5) * 100);
+
+  // Resize iframe langsung sesuai ukuran gambar Figma (trigger CSS media queries)
+  useEffect(() => {
+    const iframe = document.querySelector('#storybook-preview-iframe') as HTMLElement | null;
+    if (!iframe) return;
+
+    if (!showOverlay || !figmaOverlaySrc) {
+      iframe.style.width = '';
+      iframe.style.height = '';
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      iframe.style.width = `${img.naturalWidth}px`;
+      iframe.style.height = `${img.naturalHeight}px`;
+    };
+    img.src = figmaOverlaySrc;
+  }, [showOverlay, figmaOverlaySrc]);
 
   const handleSubmit = useCallback(() => {
     updateGlobals({ [FIGMA_URL_KEY]: figmaUrl });

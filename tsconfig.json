@@ -21,7 +21,8 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    "rootDir": "."
+    "rootDir": ".",
+    "noEmit": true
   },
   "include": ["src/**/*", ".storybook/**/*", "tsup.config.ts"],
   "exclude": ["dist", "node_modules"]

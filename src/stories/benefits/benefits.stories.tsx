@@ -8,6 +8,7 @@ const meta = {
   parameters: {
     layout: 'fullscreen',
     figmaOverlaySrc: '/figma-sync-assets/sentri-benefits--default.png',
+    // figmaOverlaySrc: '/figma-sync-assets/sentri-benefits--mobile.png',
   },
 } satisfies Meta<typeof Benefits>;
 

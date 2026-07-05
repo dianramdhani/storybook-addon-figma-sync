@@ -44,9 +44,6 @@ const withOverlay = (StoryFn: StoryFunction<Renderer>, context: StoryContext<Ren
       style: {
         position: 'absolute',
         inset: 0,
-        width: '100%',
-        height: '100%',
-        objectFit: 'cover',
         pointerEvents: 'none',
         zIndex: 9999,
         opacity: overlayOpacity,
