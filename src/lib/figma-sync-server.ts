@@ -20,6 +20,11 @@ export interface FigmaSyncAddonOptions {
   envLocation?: string;
 }
 
+interface ParsedFigmaUrl {
+  fileKey: string;
+  nodeId: string;
+}
+
 export function ensureStaticDir() {
   if (!fs.existsSync(FIGMA_STATIC_DIR)) fs.mkdirSync(FIGMA_STATIC_DIR, { recursive: true });
 }
@@ -49,8 +54,12 @@ function resolveEnvPath(envLocation = DEFAULT_ENV_LOCATION) {
 function loadEnvFile(options: FigmaSyncAddonOptions = {}) {
   const envPath = resolveEnvPath(options.envLocation);
   const result = dotenv.config({ path: envPath });
-  if (result.error && !fs.existsSync(envPath)) {
-    throw new Error(`Env file not found at ${envPath}`);
+  if (result.error) {
+    if (!fs.existsSync(envPath)) {
+      throw new Error(`Env file not found at ${envPath}`);
+    }
+
+    throw result.error;
   }
   return envPath;
 }
@@ -62,7 +71,11 @@ function getFigmaToken(options: FigmaSyncAddonOptions = {}) {
   return token;
 }
 
-function parseFigmaUrl(figmaUrl: string) {
+function sanitizeFigmaNodeId(nodeId: string) {
+  return decodeURIComponent(nodeId).replace(/-/g, ':');
+}
+
+function parseFigmaUrl(figmaUrl: string): ParsedFigmaUrl {
   let url: URL;
   try {
     url = new URL(figmaUrl);
@@ -78,7 +91,7 @@ function parseFigmaUrl(figmaUrl: string) {
 
   return {
     fileKey: match[1],
-    nodeId: decodeURIComponent(rawNodeId).replace(/-/g, ':'),
+    nodeId: sanitizeFigmaNodeId(rawNodeId),
   };
 }
 
@@ -104,6 +117,42 @@ async function downloadFile(url: string, filePath: string) {
 
 function readPngFromFile(filePath: string) {
   return PNG.sync.read(fs.readFileSync(filePath));
+}
+
+function assertFileExists(filePath: string, message: string) {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(message);
+  }
+}
+
+function calculateImageSimilarity(overlayImage: PNG, screenshotImage: PNG) {
+  if (overlayImage.width !== screenshotImage.width || overlayImage.height !== screenshotImage.height) {
+    throw new Error(
+      `Image dimensions do not match: ${overlayImage.width}x${overlayImage.height} vs ${screenshotImage.width}x${screenshotImage.height}`,
+    );
+  }
+
+  const diffPixels = pixelmatch(
+    overlayImage.data,
+    screenshotImage.data,
+    null,
+    overlayImage.width,
+    overlayImage.height,
+    { threshold: 0.1 },
+  );
+  const totalPixels = overlayImage.width * overlayImage.height;
+
+  return Number((((totalPixels - diffPixels) / totalPixels) * 100).toFixed(2));
+}
+
+function createAnalysisResult(storyId: string, similarity: number): AnalysisResult {
+  const version = Date.now();
+
+  return {
+    figmaSrc: getVersionedStoryOverlayAssetPath(storyId, version),
+    screenshotSrc: getVersionedScreenshotAssetPath(version),
+    similarity,
+  };
 }
 
 export async function downloadOverlayFromFigma(figmaUrl: string, storyId: string, options: FigmaSyncAddonOptions = {}) {
@@ -132,41 +181,14 @@ export function analyzeSavedImages(storyId: string): AnalysisResult {
   const overlayPath = getOverlayFilePath(storyId);
   const screenshotPath = getScreenshotFilePath();
 
-  if (!fs.existsSync(overlayPath)) {
-    throw new Error(`Overlay PNG not found for story ${storyId}`);
-  }
-
-  if (!fs.existsSync(screenshotPath)) {
-    throw new Error('Screenshot PNG not found');
-  }
+  assertFileExists(overlayPath, `Overlay PNG not found for story ${storyId}`);
+  assertFileExists(screenshotPath, 'Screenshot PNG not found');
 
   const overlayImage = readPngFromFile(overlayPath);
   const screenshotImage = readPngFromFile(screenshotPath);
+  const similarity = calculateImageSimilarity(overlayImage, screenshotImage);
 
-  if (overlayImage.width !== screenshotImage.width || overlayImage.height !== screenshotImage.height) {
-    throw new Error(
-      `Image dimensions do not match: ${overlayImage.width}x${overlayImage.height} vs ${screenshotImage.width}x${screenshotImage.height}`,
-    );
-  }
-
-  const diffPixels = pixelmatch(
-    overlayImage.data,
-    screenshotImage.data,
-    null,
-    overlayImage.width,
-    overlayImage.height,
-    { threshold: 0.1 },
-  );
-
-  const totalPixels = overlayImage.width * overlayImage.height;
-  const similarity = Number((((totalPixels - diffPixels) / totalPixels) * 100).toFixed(2));
-  const version = Date.now();
-
-  return {
-    figmaSrc: getVersionedStoryOverlayAssetPath(storyId, version),
-    screenshotSrc: getVersionedScreenshotAssetPath(version),
-    similarity,
-  };
+  return createAnalysisResult(storyId, similarity);
 }
 
 export function deleteScreenshotFile() {
