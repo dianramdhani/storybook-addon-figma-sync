@@ -1,3 +1,2 @@
-export const ADDON_ID = 'my-addon';
-export const TOOL_ID = `${ADDON_ID}/tool`;
-export const KEY = `my-addon`;
+export const ADDON_ID = 'storybook-addon-sync-figma';
+export const KEY = ADDON_ID;
