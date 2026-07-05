@@ -1,4 +1,5 @@
-# Storybook Addon ya
+# Storybook Addon Figma Sync
+
 Addon Storybook untuk membantu sync figma
 
 ### Development scripts
@@ -16,21 +17,11 @@ This will convert all code to JS. It is a destructive process, so we recommended
 
 ![Demo](https://user-images.githubusercontent.com/42671/107857205-e7044380-6dfa-11eb-8718-ad02e3ba1a3f.gif)
 
-The addon code lives in `src`. It demonstrates all core addon related concepts. The three [UI paradigms](https://storybook.js.org/docs/react/addons/addon-types#ui-based-addons)
+The addon code lives in `src`. For the trimmed version of this template, the only UI surface is the toolbar entry in `src/components/Tool.tsx`, which is registered from `src/manager.tsx`.
 
-- `src/Tool.tsx`
-- `src/Panel.tsx`
-- `src/Tab.tsx`
+`src/preview.ts` keeps the addon global state initialized, and `src/constants.ts` holds the addon id and global key.
 
-Which, along with the addon itself, are registered in `src/manager.ts`.
-
-Managing State and interacting with a story:
-
-- `src/withGlobals.ts` & `src/Tool.tsx` demonstrates how to use `useGlobals` to manage global state and modify the contents of a Story.
-- `src/withRoundTrip.ts` & `src/Panel.tsx` demonstrates two-way communication using channels.
-- `src/Tab.tsx` demonstrates how to use `useParameter` to access the current story's parameters.
-
-Your addon might use one or more of these patterns. Feel free to delete unused code. Update `src/manager.ts` and `src/preview.ts` accordingly.
+The rest of the scaffold has been removed so you start from a toolbar-only addon instead of the full sample kit.
 
 Lastly, configure you addon name in `src/constants.ts`.
 
