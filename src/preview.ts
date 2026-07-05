@@ -9,32 +9,13 @@ import type {
 } from 'storybook/internal/types';
 
 import {
+  CHANNEL_ANALYSIS_ERROR,
   CHANNEL_REQUEST_SCREENSHOT,
   CHANNEL_SAVE_SCREENSHOT,
   FIGMA_URL_KEY,
   OVERLAY_OPACITY_KEY,
   OVERLAY_VISIBLE_KEY,
 } from './constants';
-
-const channel = addons.getChannel();
-channel.on(CHANNEL_REQUEST_SCREENSHOT, async () => {
-  if (!document) return;
-  const element = document.getElementById('storybook-root') || document.body;
-  try {
-    const dataUrl = await toPng(element, {
-      width: window.innerWidth,
-      height: window.innerHeight,
-      filter: (node) => {
-        if (node instanceof HTMLElement && node.getAttribute('data-figma-sync-ignore') === 'true') return false;
-        return true;
-      },
-      cacheBust: true,
-    });
-    channel.emit(CHANNEL_SAVE_SCREENSHOT, { image: dataUrl });
-  } catch (error) {
-    console.error('[Figma Sync] Failed to take screenshot:', error);
-  }
-});
 
 const URL_PARAM_OVERLAY_VISIBLE = 'figmaOverlayVisible';
 const URL_PARAM_OVERLAY_OPACITY = 'figmaOverlayOpacity';
@@ -57,6 +38,56 @@ const urlGlobals = getInitialGlobalsFromUrl();
 function getStoryOverlaySrc(storyId: string) {
   return `/figma-sync-assets/figma-${storyId}.png`;
 }
+
+async function getOverlayDimensions(storyId?: string | null) {
+  if (!storyId) return null;
+
+  const overlaySrc = getStoryOverlaySrc(storyId);
+
+  return await new Promise<{ width: number; height: number } | null>((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => resolve(null);
+    img.src = `${overlaySrc}?t=${Date.now()}`;
+  });
+}
+
+const channel = addons.getChannel();
+channel.on(
+  CHANNEL_REQUEST_SCREENSHOT,
+  async (payload?: { purpose?: 'capture' | 'analyze'; storyId?: string | null }) => {
+    if (!document) return;
+    const element = document.getElementById('storybook-root') || document.body;
+    try {
+      const overlayDimensions = await getOverlayDimensions(payload?.storyId);
+      const dataUrl = await toPng(element, {
+        width: overlayDimensions?.width ?? window.innerWidth,
+        height: overlayDimensions?.height ?? window.innerHeight,
+        canvasWidth: overlayDimensions?.width ?? window.innerWidth,
+        canvasHeight: overlayDimensions?.height ?? window.innerHeight,
+        pixelRatio: 1,
+        skipAutoScale: true,
+        filter: (node) => {
+          if (node instanceof HTMLElement && node.getAttribute('data-figma-sync-ignore') === 'true') return false;
+          return true;
+        },
+        cacheBust: true,
+      });
+      channel.emit(CHANNEL_SAVE_SCREENSHOT, {
+        image: dataUrl,
+        purpose: payload?.purpose ?? 'capture',
+        storyId: payload?.storyId ?? null,
+      });
+    } catch (error) {
+      console.error('[Figma Sync] Failed to take screenshot:', error);
+      if (payload?.purpose === 'analyze') {
+        channel.emit(CHANNEL_ANALYSIS_ERROR, {
+          message: error instanceof Error ? error.message : 'Failed to capture screenshot for analysis',
+        });
+      }
+    }
+  },
+);
 
 const withOverlay = (StoryFn: StoryFunction<Renderer>, context: StoryContext<Renderer>) => {
   const overlaySrc = getStoryOverlaySrc(context.id);

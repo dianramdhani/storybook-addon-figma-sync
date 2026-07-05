@@ -2,9 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import dotenv from 'dotenv';
+import pixelmatch from 'pixelmatch';
+import { PNG } from 'pngjs';
 import type { Channel } from 'storybook/internal/channels';
 
 import {
+  CHANNEL_ANALYSIS_ERROR,
+  CHANNEL_ANALYSIS_READY,
   CHANNEL_FETCH_OVERLAY,
   CHANNEL_OVERLAY_ERROR,
   CHANNEL_OVERLAY_READY,
@@ -98,6 +102,18 @@ function getOverlayFilename(storyId: string) {
   return `figma-${safeStoryId}.png`;
 }
 
+function getOverlayFilePath(storyId: string) {
+  return path.join(FIGMA_STATIC_DIR, getOverlayFilename(storyId));
+}
+
+function getOverlayAssetUrl(storyId: string, version: number) {
+  return `/figma-sync-assets/${getOverlayFilename(storyId)}?t=${version}`;
+}
+
+function getScreenshotAssetUrl(version: number) {
+  return `/figma-sync-assets/ss.png?t=${version}`;
+}
+
 async function downloadOverlayFromFigma(figmaUrl: string, storyId: string, options: FigmaSyncAddonOptions = {}) {
   const token = getFigmaToken(options);
   const { fileKey, nodeId } = parseFigmaUrl(figmaUrl);
@@ -117,24 +133,77 @@ async function downloadOverlayFromFigma(figmaUrl: string, storyId: string, optio
   if (!imageUrl) throw new Error('Figma did not return an image for the requested node');
 
   ensureStaticDir();
-  const filePath = path.join(FIGMA_STATIC_DIR, getOverlayFilename(storyId));
+  const filePath = getOverlayFilePath(storyId);
   await downloadFile(imageUrl, filePath);
 }
 
-export const experimental_serverChannel = (channel: Channel, options: FigmaSyncAddonOptions = {}) => {
-  channel.on(CHANNEL_SAVE_SCREENSHOT, (data: { image: string }) => {
-    try {
-      const base64Data = data.image.replace(/^data:image\/png;base64,/, '');
-      const buffer = Buffer.from(base64Data, 'base64');
+function analyzeSavedImages(storyId: string) {
+  const overlayPath = getOverlayFilePath(storyId);
+  const screenshotPath = path.join(FIGMA_STATIC_DIR, 'ss.png');
 
-      ensureStaticDir();
-      const filePath = path.join(FIGMA_STATIC_DIR, 'ss.png');
-      fs.writeFileSync(filePath, buffer);
-      console.log(`[Figma Sync] Screenshot saved successfully to ${filePath}`);
-    } catch (err) {
-      console.error('[Figma Sync] Failed to save screenshot:', err);
-    }
-  });
+  if (!fs.existsSync(overlayPath)) {
+    throw new Error(`Overlay PNG not found for story ${storyId}`);
+  }
+
+  if (!fs.existsSync(screenshotPath)) {
+    throw new Error('Screenshot PNG not found');
+  }
+
+  const overlayImage = PNG.sync.read(fs.readFileSync(overlayPath));
+  const screenshotImage = PNG.sync.read(fs.readFileSync(screenshotPath));
+
+  if (overlayImage.width !== screenshotImage.width || overlayImage.height !== screenshotImage.height) {
+    throw new Error(
+      `Image dimensions do not match: ${overlayImage.width}x${overlayImage.height} vs ${screenshotImage.width}x${screenshotImage.height}`,
+    );
+  }
+
+  const diffPixels = pixelmatch(
+    overlayImage.data,
+    screenshotImage.data,
+    null,
+    overlayImage.width,
+    overlayImage.height,
+    { threshold: 0.1 },
+  );
+
+  const totalPixels = overlayImage.width * overlayImage.height;
+  const similarity = Number((((totalPixels - diffPixels) / totalPixels) * 100).toFixed(2));
+  const version = Date.now();
+
+  return {
+    figmaSrc: getOverlayAssetUrl(storyId, version),
+    screenshotSrc: getScreenshotAssetUrl(version),
+    similarity,
+  };
+}
+
+export const experimental_serverChannel = (channel: Channel, options: FigmaSyncAddonOptions = {}) => {
+  channel.on(
+    CHANNEL_SAVE_SCREENSHOT,
+    (data: { image: string; purpose?: 'capture' | 'analyze'; storyId?: string | null }) => {
+      try {
+        const base64Data = data.image.replace(/^data:image\/png;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+
+        ensureStaticDir();
+        const filePath = path.join(FIGMA_STATIC_DIR, 'ss.png');
+        fs.writeFileSync(filePath, buffer);
+        console.log(`[Figma Sync] Screenshot saved successfully to ${filePath}`);
+
+        if (data.purpose === 'analyze' && data.storyId) {
+          const result = analyzeSavedImages(data.storyId);
+          channel.emit(CHANNEL_ANALYSIS_READY, result);
+        }
+      } catch (err) {
+        if (data.purpose === 'analyze') {
+          const message = err instanceof Error ? err.message : 'Unknown error while analyzing screenshot';
+          channel.emit(CHANNEL_ANALYSIS_ERROR, { message });
+        }
+        console.error('[Figma Sync] Failed to save screenshot:', err);
+      }
+    },
+  );
 
   channel.on(CHANNEL_FETCH_OVERLAY, async (data: { figmaUrl: string; storyId: string }) => {
     try {

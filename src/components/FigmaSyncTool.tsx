@@ -1,9 +1,11 @@
 import { LinkIcon } from '@storybook/icons';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Form, PopoverProvider } from 'storybook/internal/components';
+import { Button, Form, Modal, PopoverProvider } from 'storybook/internal/components';
 import { useChannel, useGlobals, useStorybookApi } from 'storybook/manager-api';
 
 import {
+  CHANNEL_ANALYSIS_ERROR,
+  CHANNEL_ANALYSIS_READY,
   CHANNEL_FETCH_OVERLAY,
   CHANNEL_OVERLAY_ERROR,
   CHANNEL_OVERLAY_READY,
@@ -39,9 +41,29 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const [overlayVersion, setOverlayVersion] = useState(() => Date.now());
   const [overlayAvailable, setOverlayAvailable] = useState(false);
+  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
+  const [analysisState, setAnalysisState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [analysisMessage, setAnalysisMessage] = useState('');
+  const [analysisResult, setAnalysisResult] = useState<{
+    figmaSrc: string;
+    screenshotSrc: string;
+    similarity: number;
+  } | null>(null);
   const overlayImageSrc = `${getStoryOverlaySrc(storyId)}?t=${overlayVersion}`;
 
   const emit = useChannel({
+    [CHANNEL_ANALYSIS_READY]: (payload: { figmaSrc: string; screenshotSrc: string; similarity: number }) => {
+      setAnalysisState('success');
+      setAnalysisMessage('');
+      setAnalysisResult(payload);
+      setIsAnalysisModalOpen(true);
+      setIsTooltipVisible(false);
+    },
+    [CHANNEL_ANALYSIS_ERROR]: (payload: { message: string }) => {
+      setAnalysisState('error');
+      setAnalysisMessage(payload.message);
+      setIsAnalysisModalOpen(false);
+    },
     [CHANNEL_OVERLAY_READY]: (payload: { figmaUrl: string }) => {
       setFetchState('success');
       setFetchMessage('Overlay downloaded');
@@ -158,7 +180,7 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
     setFetchMessage('Downloading overlay from Figma...');
     updateGlobals({ [FIGMA_URL_KEY]: localFigmaUrl });
     emit(CHANNEL_FETCH_OVERLAY, { figmaUrl: localFigmaUrl, storyId });
-    emit(CHANNEL_REQUEST_SCREENSHOT);
+    emit(CHANNEL_REQUEST_SCREENSHOT, { purpose: 'capture', storyId });
   }, [emit, localFigmaUrl, storyId, updateGlobals]);
 
   const handleVisibleChange = useCallback(
@@ -183,70 +205,202 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
     [updateGlobalsDebounced],
   );
 
+  const handleAnalyze = useCallback(() => {
+    setAnalysisState('loading');
+    setAnalysisMessage('Analyzing screenshot against Figma overlay...');
+    setAnalysisResult(null);
+    emit(CHANNEL_REQUEST_SCREENSHOT, { purpose: 'analyze', storyId });
+  }, [emit, storyId]);
+
   return (
-    <PopoverProvider
-      placement="bottom"
-      closeOnOutsideClick
-      visible={isTooltipVisible}
-      onVisibleChange={setIsTooltipVisible}
-      aria-label="Figma Sync settings popover"
-      popover={() => (
-        <div
-          style={{
-            padding: '12px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-          }}
-        >
-          <Field label="Figma URL">
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <Form.Input
-                id="figma-url-input"
-                type="text"
-                placeholder="https://www.figma.com/file/..."
-                value={localFigmaUrl}
-                onChange={(e) => setLocalFigmaUrl(e.target.value)}
-              />
-              <Button type="button" onClick={handleSubmit} style={{ height: '100%' }} ariaLabel={false}>
-                Submit
-              </Button>
-            </div>
-          </Field>
-          {overlayAvailable ? (
-            <Field label={`Overlay: ${localShowOverlay ? ` ${Math.round(localOverlayOpacity)}%` : ' Off'}`}>
-              <input type="checkbox" checked={localShowOverlay} onChange={handleVisibleChange} />
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={1}
-                value={localOverlayOpacity}
-                onChange={handleOpacityChange}
-                disabled={!localShowOverlay}
-                style={{ flex: 1, width: '100%' }}
-              />
+    <>
+      <PopoverProvider
+        placement="bottom"
+        closeOnOutsideClick
+        visible={isTooltipVisible}
+        onVisibleChange={setIsTooltipVisible}
+        aria-label="Figma Sync settings popover"
+        popover={() => (
+          <div
+            style={{
+              padding: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              minWidth: '360px',
+            }}
+          >
+            <Field label="Figma URL">
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Form.Input
+                  id="figma-url-input"
+                  type="text"
+                  placeholder="https://www.figma.com/file/..."
+                  value={localFigmaUrl}
+                  onChange={(e) => setLocalFigmaUrl(e.target.value)}
+                />
+                <Button type="button" onClick={handleSubmit} style={{ height: '100%' }} ariaLabel={false}>
+                  Submit
+                </Button>
+              </div>
             </Field>
-          ) : null}
-          {fetchMessage ? (
-            <div
+            {overlayAvailable ? (
+              <Field label={`Overlay: ${localShowOverlay ? ` ${Math.round(localOverlayOpacity)}%` : ' Off'}`}>
+                <input type="checkbox" checked={localShowOverlay} onChange={handleVisibleChange} />
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={localOverlayOpacity}
+                  onChange={handleOpacityChange}
+                  disabled={!localShowOverlay}
+                  style={{ flex: 1, width: '100%' }}
+                />
+              </Field>
+            ) : null}
+            {fetchMessage ? (
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: fetchState === 'error' ? '#d32f2f' : '#666',
+                }}
+              >
+                {fetchMessage}
+              </div>
+            ) : null}
+            {!overlayAvailable && fetchState !== 'loading' ? (
+              <div style={{ fontSize: '12px', color: '#666' }}>Overlay PNG belum tersedia untuk story ini.</div>
+            ) : null}
+            {analysisMessage ? (
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: analysisState === 'error' ? '#d32f2f' : '#666',
+                }}
+              >
+                {analysisMessage}
+              </div>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleAnalyze}
+              disabled={!overlayAvailable || analysisState === 'loading'}
               style={{
-                fontSize: '12px',
-                color: fetchState === 'error' ? '#d32f2f' : '#666',
+                justifyContent: 'center',
+                width: '100%',
               }}
             >
-              {fetchMessage}
+              {analysisState === 'loading' ? 'Menganalisis...' : 'Analisis'}
+            </Button>
+          </div>
+        )}
+      >
+        <Button
+          variant={globals[FIGMA_URL_KEY] ? 'outline' : 'ghost'}
+          title="Figma Sync"
+          ariaLabel="Figma Sync Settings"
+        >
+          <LinkIcon />
+        </Button>
+      </PopoverProvider>
+      <Modal
+        open={isAnalysisModalOpen}
+        onOpenChange={setIsAnalysisModalOpen}
+        ariaLabel="Figma analysis result"
+        width="100vw"
+        height="100vh"
+      >
+        <div
+          style={{
+            display: 'flex',
+            height: '100%',
+            width: '100%',
+            flexDirection: 'column',
+            background: '#0f1115',
+            color: '#fff',
+          }}
+        >
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr auto 1fr',
+              alignItems: 'center',
+              gap: '16px',
+              padding: '24px 32px 16px',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            <div />
+            <div style={{ fontSize: '24px', fontWeight: 700, textAlign: 'center' }}>
+              {analysisResult ? `Kemiripan ${analysisResult.similarity}%` : 'Analisis'}
             </div>
-          ) : null}
-          {!overlayAvailable && fetchState !== 'loading' ? (
-            <div style={{ fontSize: '12px', color: '#666' }}>Overlay PNG belum tersedia untuk story ini.</div>
-          ) : null}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button type="button" variant="outline" onClick={() => setIsAnalysisModalOpen(false)} ariaLabel={false}>
+                Tutup
+              </Button>
+            </div>
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '24px',
+              flex: 1,
+              minHeight: 0,
+              padding: '24px 32px 32px',
+            }}
+          >
+            {analysisResult ? (
+              <>
+                <div style={{ display: 'flex', minHeight: 0, flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.72)' }}>Figma</div>
+                  <div
+                    style={{
+                      flex: 1,
+                      minHeight: 0,
+                      overflow: 'auto',
+                      borderRadius: '12px',
+                      background: '#16191f',
+                      padding: '16px',
+                    }}
+                  >
+                    <img
+                      src={analysisResult.figmaSrc}
+                      alt="Figma overlay"
+                      style={{ display: 'block', width: '100%', height: 'auto', objectFit: 'contain' }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', minHeight: 0, flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.72)' }}>Screenshot</div>
+                  <div
+                    style={{
+                      flex: 1,
+                      minHeight: 0,
+                      overflow: 'auto',
+                      borderRadius: '12px',
+                      background: '#16191f',
+                      padding: '16px',
+                    }}
+                  >
+                    <img
+                      src={analysisResult.screenshotSrc}
+                      alt="Storybook screenshot"
+                      style={{ display: 'block', width: '100%', height: 'auto', objectFit: 'contain' }}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={{ gridColumn: '1 / -1', alignSelf: 'center', justifySelf: 'center', color: '#c8ccd4' }}>
+                Hasil analisis belum tersedia.
+              </div>
+            )}
+          </div>
         </div>
-      )}
-    >
-      <Button variant={globals[FIGMA_URL_KEY] ? 'outline' : 'ghost'} title="Figma Sync" ariaLabel="Figma Sync Settings">
-        <LinkIcon />
-      </Button>
-    </PopoverProvider>
+      </Modal>
+    </>
   );
 });

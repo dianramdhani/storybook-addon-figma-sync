@@ -8,3 +8,5 @@ export const CHANNEL_SAVE_SCREENSHOT = `${ADDON_ID}/save-screenshot`;
 export const CHANNEL_FETCH_OVERLAY = `${ADDON_ID}/fetch-overlay`;
 export const CHANNEL_OVERLAY_READY = `${ADDON_ID}/overlay-ready`;
 export const CHANNEL_OVERLAY_ERROR = `${ADDON_ID}/overlay-error`;
+export const CHANNEL_ANALYSIS_READY = `${ADDON_ID}/analysis-ready`;
+export const CHANNEL_ANALYSIS_ERROR = `${ADDON_ID}/analysis-error`;
