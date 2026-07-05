@@ -1,7 +1,7 @@
 import { LinkIcon } from '@storybook/icons';
 import React, { memo, useCallback } from 'react';
 import { Button, Form, IconButton, WithTooltip } from 'storybook/internal/components';
-import { useGlobals } from 'storybook/manager-api';
+import { useGlobals, useStorybookApi } from 'storybook/manager-api';
 
 import { FIGMA_URL_KEY, OVERLAY_OPACITY_KEY, OVERLAY_VISIBLE_KEY } from '../constants';
 
@@ -16,6 +16,7 @@ function Field({ label, children }: { label: React.ReactNode; children: React.Re
 
 export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const [globals, updateGlobals] = useGlobals();
+  const api = useStorybookApi();
   const figmaUrl = (globals[FIGMA_URL_KEY] as string) || '';
   const showOverlay = Boolean(globals[OVERLAY_VISIBLE_KEY]);
   const overlayOpacity = Math.round(((globals[OVERLAY_OPACITY_KEY] as number | undefined) ?? 0.5) * 100);
@@ -26,16 +27,23 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
 
   const handleVisibleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      updateGlobals({ [OVERLAY_VISIBLE_KEY]: event.target.checked });
+      const checked = event.target.checked;
+      updateGlobals({ [OVERLAY_VISIBLE_KEY]: checked });
+      api.setQueryParams({
+        figmaOverlayVisible: checked ? '1' : null,
+        figmaOverlayOpacity: checked ? String(overlayOpacity) : null,
+      });
     },
-    [updateGlobals],
+    [updateGlobals, api, overlayOpacity],
   );
 
   const handleOpacityChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      updateGlobals({ [OVERLAY_OPACITY_KEY]: Number(event.target.value) / 100 });
+      const value = Number(event.target.value) / 100;
+      updateGlobals({ [OVERLAY_OPACITY_KEY]: value });
+      api.setQueryParams({ figmaOverlayOpacity: String(Math.round(value * 100)) });
     },
-    [updateGlobals],
+    [updateGlobals, api],
   );
 
   return (
