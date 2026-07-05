@@ -10,3 +10,4 @@ export const CHANNEL_OVERLAY_READY = `${ADDON_ID}/overlay-ready`;
 export const CHANNEL_OVERLAY_ERROR = `${ADDON_ID}/overlay-error`;
 export const CHANNEL_ANALYSIS_READY = `${ADDON_ID}/analysis-ready`;
 export const CHANNEL_ANALYSIS_ERROR = `${ADDON_ID}/analysis-error`;
+export const CHANNEL_DELETE_SCREENSHOT = `${ADDON_ID}/delete-screenshot`;

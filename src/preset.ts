@@ -9,6 +9,7 @@ import type { Channel } from 'storybook/internal/channels';
 import {
   CHANNEL_ANALYSIS_ERROR,
   CHANNEL_ANALYSIS_READY,
+  CHANNEL_DELETE_SCREENSHOT,
   CHANNEL_FETCH_OVERLAY,
   CHANNEL_OVERLAY_ERROR,
   CHANNEL_OVERLAY_READY,
@@ -114,6 +115,10 @@ function getScreenshotAssetUrl(version: number) {
   return `/figma-sync-assets/ss.png?t=${version}`;
 }
 
+function getScreenshotFilePath() {
+  return path.join(FIGMA_STATIC_DIR, 'ss.png');
+}
+
 async function downloadOverlayFromFigma(figmaUrl: string, storyId: string, options: FigmaSyncAddonOptions = {}) {
   const token = getFigmaToken(options);
   const { fileKey, nodeId } = parseFigmaUrl(figmaUrl);
@@ -139,7 +144,7 @@ async function downloadOverlayFromFigma(figmaUrl: string, storyId: string, optio
 
 function analyzeSavedImages(storyId: string) {
   const overlayPath = getOverlayFilePath(storyId);
-  const screenshotPath = path.join(FIGMA_STATIC_DIR, 'ss.png');
+  const screenshotPath = getScreenshotFilePath();
 
   if (!fs.existsSync(overlayPath)) {
     throw new Error(`Overlay PNG not found for story ${storyId}`);
@@ -187,7 +192,7 @@ export const experimental_serverChannel = (channel: Channel, options: FigmaSyncA
         const buffer = Buffer.from(base64Data, 'base64');
 
         ensureStaticDir();
-        const filePath = path.join(FIGMA_STATIC_DIR, 'ss.png');
+        const filePath = getScreenshotFilePath();
         fs.writeFileSync(filePath, buffer);
         console.log(`[Figma Sync] Screenshot saved successfully to ${filePath}`);
 
@@ -216,6 +221,18 @@ export const experimental_serverChannel = (channel: Channel, options: FigmaSyncA
       const message = err instanceof Error ? err.message : 'Unknown error while downloading Figma overlay';
       channel.emit(CHANNEL_OVERLAY_ERROR, { message });
       console.error('[Figma Sync] Failed to download overlay:', err);
+    }
+  });
+
+  channel.on(CHANNEL_DELETE_SCREENSHOT, () => {
+    try {
+      const screenshotPath = getScreenshotFilePath();
+      if (fs.existsSync(screenshotPath)) {
+        fs.unlinkSync(screenshotPath);
+        console.log(`[Figma Sync] Screenshot deleted successfully from ${screenshotPath}`);
+      }
+    } catch (err) {
+      console.error('[Figma Sync] Failed to delete screenshot:', err);
     }
   });
 

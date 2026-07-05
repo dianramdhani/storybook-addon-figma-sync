@@ -6,6 +6,7 @@ import { useChannel, useGlobals, useStorybookApi } from 'storybook/manager-api';
 import {
   CHANNEL_ANALYSIS_ERROR,
   CHANNEL_ANALYSIS_READY,
+  CHANNEL_DELETE_SCREENSHOT,
   CHANNEL_FETCH_OVERLAY,
   CHANNEL_OVERLAY_ERROR,
   CHANNEL_OVERLAY_READY,
@@ -180,7 +181,6 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
     setFetchMessage('Downloading overlay from Figma...');
     updateGlobals({ [FIGMA_URL_KEY]: localFigmaUrl });
     emit(CHANNEL_FETCH_OVERLAY, { figmaUrl: localFigmaUrl, storyId });
-    emit(CHANNEL_REQUEST_SCREENSHOT, { purpose: 'capture', storyId });
   }, [emit, localFigmaUrl, storyId, updateGlobals]);
 
   const handleVisibleChange = useCallback(
@@ -211,6 +211,19 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
     setAnalysisResult(null);
     emit(CHANNEL_REQUEST_SCREENSHOT, { purpose: 'analyze', storyId });
   }, [emit, storyId]);
+
+  const handleAnalysisModalOpenChange = useCallback(
+    (isOpen: boolean) => {
+      setIsAnalysisModalOpen(isOpen);
+      if (!isOpen) {
+        setAnalysisState('idle');
+        setAnalysisMessage('');
+        setAnalysisResult(null);
+        emit(CHANNEL_DELETE_SCREENSHOT);
+      }
+    },
+    [emit],
+  );
 
   return (
     <>
@@ -307,7 +320,7 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
       </PopoverProvider>
       <Modal
         open={isAnalysisModalOpen}
-        onOpenChange={setIsAnalysisModalOpen}
+        onOpenChange={handleAnalysisModalOpenChange}
         ariaLabel="Figma analysis result"
         width="100vw"
         height="100vh"
@@ -337,7 +350,12 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
               {analysisResult ? `Kemiripan ${analysisResult.similarity}%` : 'Analisis'}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button type="button" variant="outline" onClick={() => setIsAnalysisModalOpen(false)} ariaLabel={false}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleAnalysisModalOpenChange(false)}
+                ariaLabel={false}
+              >
                 Tutup
               </Button>
             </div>
