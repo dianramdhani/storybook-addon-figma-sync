@@ -21,11 +21,11 @@ import {
   OVERLAY_VISIBLE_KEY,
   type OverlayReadyPayload,
   type RequestScreenshotPayload,
-  STORYBOOK_PREVIEW_IFRAME_SELECTOR,
   URL_PARAM_OVERLAY_OPACITY,
   URL_PARAM_OVERLAY_VISIBLE,
 } from '../constants';
 import { AnalysisModal } from './AnalysisModal';
+import { useOverlayAvailability, useOverlayIframeSizing } from './useOverlayImage';
 
 function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -50,21 +50,12 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const [fetchMessage, setFetchMessage] = useState('');
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const [overlayVersion, setOverlayVersion] = useState(() => Date.now());
-  const [overlayAvailable, setOverlayAvailable] = useState(false);
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
   const [analysisState, setAnalysisState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [analysisMessage, setAnalysisMessage] = useState('');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const overlayImageSrc = getVersionedStoryOverlayAssetPath(storyId, overlayVersion);
-
-  const loadImage = useCallback((src: string) => {
-    return new Promise<HTMLImageElement>((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error(`Failed to load image: ${src}`));
-      image.src = src;
-    });
-  }, []);
+  const overlayAvailable = useOverlayAvailability(overlayImageSrc);
 
   const emit = useChannel({
     [CHANNEL_ANALYSIS_READY]: (payload: AnalysisResult) => {
@@ -109,53 +100,13 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   }, [storyId]);
 
   useEffect(() => {
-    let isCancelled = false;
-    loadImage(overlayImageSrc)
-      .then(() => {
-        if (!isCancelled) setOverlayAvailable(true);
-      })
-      .catch(() => {
-        if (!isCancelled) setOverlayAvailable(false);
-      });
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [loadImage, overlayImageSrc]);
-
-  useEffect(() => {
     if (overlayAvailable || !showOverlay) return;
 
     updateGlobals({ [OVERLAY_VISIBLE_KEY]: false });
     api.setQueryParams({ [URL_PARAM_OVERLAY_VISIBLE]: null });
   }, [api, overlayAvailable, showOverlay, updateGlobals]);
 
-  // Resize iframe langsung sesuai ukuran gambar Figma (trigger CSS media queries)
-  useEffect(() => {
-    const iframe = document.querySelector(STORYBOOK_PREVIEW_IFRAME_SELECTOR) as HTMLElement | null;
-    if (!iframe) return;
-
-    if (!showOverlay || !overlayImageSrc) {
-      iframe.style.width = '';
-      iframe.style.height = '';
-      return;
-    }
-
-    loadImage(overlayImageSrc)
-      .then((image) => {
-        iframe.style.width = `${image.naturalWidth}px`;
-        iframe.style.height = `${image.naturalHeight}px`;
-      })
-      .catch(() => {
-        iframe.style.width = '';
-        iframe.style.height = '';
-      });
-
-    return () => {
-      iframe.style.width = '';
-      iframe.style.height = '';
-    };
-  }, [loadImage, overlayImageSrc, showOverlay]);
+  useOverlayIframeSizing(overlayImageSrc, showOverlay);
 
   const handleSubmit = useCallback(() => {
     setFetchState('loading');

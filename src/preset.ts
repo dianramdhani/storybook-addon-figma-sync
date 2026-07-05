@@ -100,16 +100,16 @@ function getOverlayFilePath(storyId: string) {
   return path.join(FIGMA_STATIC_DIR, getStoryOverlayFilename(storyId));
 }
 
-function getOverlayAssetUrl(storyId: string, version: number) {
-  return getVersionedStoryOverlayAssetPath(storyId, version);
-}
-
-function getScreenshotAssetUrl(version: number) {
-  return getVersionedScreenshotAssetPath(version);
-}
-
 function getScreenshotFilePath() {
   return path.join(FIGMA_STATIC_DIR, getScreenshotFilename());
+}
+
+function decodePngDataUrl(image: string) {
+  return Buffer.from(image.replace(/^data:image\/png;base64,/, ''), 'base64');
+}
+
+function readPngFromFile(filePath: string) {
+  return PNG.sync.read(fs.readFileSync(filePath));
 }
 
 async function downloadOverlayFromFigma(figmaUrl: string, storyId: string, options: FigmaSyncAddonOptions = {}) {
@@ -147,8 +147,8 @@ function analyzeSavedImages(storyId: string) {
     throw new Error('Screenshot PNG not found');
   }
 
-  const overlayImage = PNG.sync.read(fs.readFileSync(overlayPath));
-  const screenshotImage = PNG.sync.read(fs.readFileSync(screenshotPath));
+  const overlayImage = readPngFromFile(overlayPath);
+  const screenshotImage = readPngFromFile(screenshotPath);
 
   if (overlayImage.width !== screenshotImage.width || overlayImage.height !== screenshotImage.height) {
     throw new Error(
@@ -170,8 +170,8 @@ function analyzeSavedImages(storyId: string) {
   const version = Date.now();
 
   const result: AnalysisResult = {
-    figmaSrc: getOverlayAssetUrl(storyId, version),
-    screenshotSrc: getScreenshotAssetUrl(version),
+    figmaSrc: getVersionedStoryOverlayAssetPath(storyId, version),
+    screenshotSrc: getVersionedScreenshotAssetPath(version),
     similarity,
   };
 
@@ -181,12 +181,9 @@ function analyzeSavedImages(storyId: string) {
 export const experimental_serverChannel = (channel: Channel, options: FigmaSyncAddonOptions = {}) => {
   channel.on(CHANNEL_SAVE_SCREENSHOT, (data: SaveScreenshotPayload) => {
     try {
-      const base64Data = data.image.replace(/^data:image\/png;base64,/, '');
-      const buffer = Buffer.from(base64Data, 'base64');
-
       ensureStaticDir();
       const filePath = getScreenshotFilePath();
-      fs.writeFileSync(filePath, buffer);
+      fs.writeFileSync(filePath, decodePngDataUrl(data.image));
 
       if (data.purpose === 'analyze' && data.storyId) {
         const result = analyzeSavedImages(data.storyId);

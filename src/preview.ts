@@ -27,6 +27,11 @@ import {
   URL_PARAM_OVERLAY_VISIBLE,
 } from './constants';
 
+interface OverlayDimensions {
+  width: number;
+  height: number;
+}
+
 function getInitialGlobalsFromUrl(): Partial<FigmaSyncGlobals> {
   const params = new URLSearchParams(window.location.search);
   const updates: Partial<FigmaSyncGlobals> = {};
@@ -41,17 +46,33 @@ function getInitialGlobalsFromUrl(): Partial<FigmaSyncGlobals> {
 }
 
 const urlGlobals = getInitialGlobalsFromUrl();
+
 async function getOverlayDimensions(storyId?: string | null) {
   if (!storyId) return null;
 
   const overlaySrc = getStoryOverlayAssetPath(storyId);
 
-  return new Promise<{ width: number; height: number } | null>((resolve) => {
+  return new Promise<OverlayDimensions | null>((resolve) => {
     const img = new Image();
     img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
     img.onerror = () => resolve(null);
     img.src = `${overlaySrc}?t=${Date.now()}`;
   });
+}
+
+function getCaptureDimensions(overlayDimensions: OverlayDimensions | null): OverlayDimensions {
+  return {
+    width: overlayDimensions?.width ?? window.innerWidth,
+    height: overlayDimensions?.height ?? window.innerHeight,
+  };
+}
+
+function createScreenshotPayload(dataUrl: string, payload?: RequestScreenshotPayload): SaveScreenshotPayload {
+  return {
+    image: dataUrl,
+    purpose: payload?.purpose ?? 'capture',
+    storyId: payload?.storyId ?? null,
+  };
 }
 
 const channel = addons.getChannel();
@@ -62,8 +83,7 @@ channel.on(CHANNEL_REQUEST_SCREENSHOT, async (payload?: RequestScreenshotPayload
 
   try {
     const overlayDimensions = await getOverlayDimensions(payload?.storyId);
-    const width = overlayDimensions?.width ?? window.innerWidth;
-    const height = overlayDimensions?.height ?? window.innerHeight;
+    const { width, height } = getCaptureDimensions(overlayDimensions);
     const dataUrl = await toPng(element, {
       width,
       height,
@@ -77,11 +97,7 @@ channel.on(CHANNEL_REQUEST_SCREENSHOT, async (payload?: RequestScreenshotPayload
       },
       cacheBust: true,
     });
-    const screenshotPayload: SaveScreenshotPayload = {
-      image: dataUrl,
-      purpose: payload?.purpose ?? 'capture',
-      storyId: payload?.storyId ?? null,
-    };
+    const screenshotPayload = createScreenshotPayload(dataUrl, payload);
     channel.emit(CHANNEL_SAVE_SCREENSHOT, screenshotPayload);
   } catch (error) {
     console.error('[Figma Sync] Failed to take screenshot:', error);
