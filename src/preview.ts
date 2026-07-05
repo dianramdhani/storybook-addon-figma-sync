@@ -13,13 +13,15 @@ import {
   CHANNEL_REQUEST_SCREENSHOT,
   CHANNEL_SAVE_SCREENSHOT,
   FIGMA_URL_KEY,
+  type FigmaSyncErrorPayload,
   getStoryOverlayAssetPath,
   OVERLAY_OPACITY_KEY,
   OVERLAY_VISIBLE_KEY,
+  type RequestScreenshotPayload,
+  type SaveScreenshotPayload,
+  URL_PARAM_OVERLAY_OPACITY,
+  URL_PARAM_OVERLAY_VISIBLE,
 } from './constants';
-
-const URL_PARAM_OVERLAY_VISIBLE = 'figmaOverlayVisible';
-const URL_PARAM_OVERLAY_OPACITY = 'figmaOverlayOpacity';
 
 function getInitialGlobalsFromUrl(): Record<string, unknown> {
   const params = new URLSearchParams(window.location.search);
@@ -40,7 +42,7 @@ async function getOverlayDimensions(storyId?: string | null) {
 
   const overlaySrc = getStoryOverlayAssetPath(storyId);
 
-  return await new Promise<{ width: number; height: number } | null>((resolve) => {
+  return new Promise<{ width: number; height: number } | null>((resolve) => {
     const img = new Image();
     img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
     img.onerror = () => resolve(null);
@@ -49,41 +51,44 @@ async function getOverlayDimensions(storyId?: string | null) {
 }
 
 const channel = addons.getChannel();
-channel.on(
-  CHANNEL_REQUEST_SCREENSHOT,
-  async (payload?: { purpose?: 'capture' | 'analyze'; storyId?: string | null }) => {
-    if (!document) return;
-    const element = document.getElementById('storybook-root') || document.body;
-    try {
-      const overlayDimensions = await getOverlayDimensions(payload?.storyId);
-      const dataUrl = await toPng(element, {
-        width: overlayDimensions?.width ?? window.innerWidth,
-        height: overlayDimensions?.height ?? window.innerHeight,
-        canvasWidth: overlayDimensions?.width ?? window.innerWidth,
-        canvasHeight: overlayDimensions?.height ?? window.innerHeight,
-        pixelRatio: 1,
-        skipAutoScale: true,
-        filter: (node) => {
-          if (node instanceof HTMLElement && node.getAttribute('data-figma-sync-ignore') === 'true') return false;
-          return true;
-        },
-        cacheBust: true,
-      });
-      channel.emit(CHANNEL_SAVE_SCREENSHOT, {
-        image: dataUrl,
-        purpose: payload?.purpose ?? 'capture',
-        storyId: payload?.storyId ?? null,
-      });
-    } catch (error) {
-      console.error('[Figma Sync] Failed to take screenshot:', error);
-      if (payload?.purpose === 'analyze') {
-        channel.emit(CHANNEL_ANALYSIS_ERROR, {
-          message: error instanceof Error ? error.message : 'Failed to capture screenshot for analysis',
-        });
-      }
+channel.on(CHANNEL_REQUEST_SCREENSHOT, async (payload?: RequestScreenshotPayload) => {
+  if (typeof document === 'undefined') return;
+
+  const element = document.getElementById('storybook-root') || document.body;
+
+  try {
+    const overlayDimensions = await getOverlayDimensions(payload?.storyId);
+    const width = overlayDimensions?.width ?? window.innerWidth;
+    const height = overlayDimensions?.height ?? window.innerHeight;
+    const dataUrl = await toPng(element, {
+      width,
+      height,
+      canvasWidth: width,
+      canvasHeight: height,
+      pixelRatio: 1,
+      skipAutoScale: true,
+      filter: (node) => {
+        if (node instanceof HTMLElement && node.getAttribute('data-figma-sync-ignore') === 'true') return false;
+        return true;
+      },
+      cacheBust: true,
+    });
+    const screenshotPayload: SaveScreenshotPayload = {
+      image: dataUrl,
+      purpose: payload?.purpose ?? 'capture',
+      storyId: payload?.storyId ?? null,
+    };
+    channel.emit(CHANNEL_SAVE_SCREENSHOT, screenshotPayload);
+  } catch (error) {
+    console.error('[Figma Sync] Failed to take screenshot:', error);
+    if (payload?.purpose === 'analyze') {
+      const errorPayload: FigmaSyncErrorPayload = {
+        message: error instanceof Error ? error.message : 'Failed to capture screenshot for analysis',
+      };
+      channel.emit(CHANNEL_ANALYSIS_ERROR, errorPayload);
     }
-  },
-);
+  }
+});
 
 const withOverlay = (StoryFn: StoryFunction<Renderer>, context: StoryContext<Renderer>) => {
   const overlaySrc = getStoryOverlayAssetPath(context.id);

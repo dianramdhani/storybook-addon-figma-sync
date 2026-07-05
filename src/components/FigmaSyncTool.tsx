@@ -4,6 +4,7 @@ import { Button, Form, PopoverProvider } from 'storybook/internal/components';
 import { useChannel, useGlobals, useStorybookApi } from 'storybook/manager-api';
 
 import {
+  type AnalysisResult,
   CHANNEL_ANALYSIS_ERROR,
   CHANNEL_ANALYSIS_READY,
   CHANNEL_DELETE_SCREENSHOT,
@@ -12,9 +13,14 @@ import {
   CHANNEL_OVERLAY_READY,
   CHANNEL_REQUEST_SCREENSHOT,
   FIGMA_URL_KEY,
+  type FigmaSyncErrorPayload,
   getStoryOverlayAssetPath,
   OVERLAY_OPACITY_KEY,
   OVERLAY_VISIBLE_KEY,
+  type OverlayReadyPayload,
+  type RequestScreenshotPayload,
+  URL_PARAM_OVERLAY_OPACITY,
+  URL_PARAM_OVERLAY_VISIBLE,
 } from '../constants';
 import { AnalysisModal } from './AnalysisModal';
 
@@ -43,27 +49,23 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
   const [analysisState, setAnalysisState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [analysisMessage, setAnalysisMessage] = useState('');
-  const [analysisResult, setAnalysisResult] = useState<{
-    figmaSrc: string;
-    screenshotSrc: string;
-    similarity: number;
-  } | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const overlayImageSrc = `${getStoryOverlayAssetPath(storyId)}?t=${overlayVersion}`;
 
   const emit = useChannel({
-    [CHANNEL_ANALYSIS_READY]: (payload: { figmaSrc: string; screenshotSrc: string; similarity: number }) => {
+    [CHANNEL_ANALYSIS_READY]: (payload: AnalysisResult) => {
       setAnalysisState('success');
       setAnalysisMessage('');
       setAnalysisResult(payload);
       setIsAnalysisModalOpen(true);
       setIsTooltipVisible(false);
     },
-    [CHANNEL_ANALYSIS_ERROR]: (payload: { message: string }) => {
+    [CHANNEL_ANALYSIS_ERROR]: (payload: FigmaSyncErrorPayload) => {
       setAnalysisState('error');
       setAnalysisMessage(payload.message);
       setIsAnalysisModalOpen(false);
     },
-    [CHANNEL_OVERLAY_READY]: (payload: { figmaUrl: string }) => {
+    [CHANNEL_OVERLAY_READY]: (payload: OverlayReadyPayload) => {
       setFetchState('success');
       setFetchMessage('Overlay downloaded');
       setOverlayVersion(Date.now());
@@ -72,10 +74,10 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
         [FIGMA_URL_KEY]: payload.figmaUrl,
         [OVERLAY_VISIBLE_KEY]: true,
       });
-      api.setQueryParams({ figmaOverlayVisible: '1' });
+      api.setQueryParams({ [URL_PARAM_OVERLAY_VISIBLE]: '1' });
       setIsTooltipVisible(false);
     },
-    [CHANNEL_OVERLAY_ERROR]: (payload: { message: string }) => {
+    [CHANNEL_OVERLAY_ERROR]: (payload: FigmaSyncErrorPayload) => {
       setFetchState('error');
       setFetchMessage(payload.message);
     },
@@ -115,7 +117,7 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
     if (overlayAvailable || !showOverlay) return;
 
     updateGlobals({ [OVERLAY_VISIBLE_KEY]: false });
-    api.setQueryParams({ figmaOverlayVisible: null });
+    api.setQueryParams({ [URL_PARAM_OVERLAY_VISIBLE]: null });
   }, [api, overlayAvailable, showOverlay, updateGlobals]);
 
   // Resize iframe langsung sesuai ukuran gambar Figma (trigger CSS media queries)
@@ -135,6 +137,11 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
       iframe.style.height = `${img.naturalHeight}px`;
     };
     img.src = overlayImageSrc;
+
+    return () => {
+      iframe.style.width = '';
+      iframe.style.height = '';
+    };
   }, [overlayImageSrc, showOverlay]);
 
   const handleSubmit = useCallback(() => {
@@ -149,8 +156,8 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
       const checked = event.target.checked;
       updateGlobals({ [OVERLAY_VISIBLE_KEY]: checked });
       api.setQueryParams({
-        figmaOverlayVisible: checked ? '1' : null,
-        figmaOverlayOpacity: checked ? String(overlayOpacity) : null,
+        [URL_PARAM_OVERLAY_VISIBLE]: checked ? '1' : null,
+        [URL_PARAM_OVERLAY_OPACITY]: checked ? String(overlayOpacity) : null,
       });
     },
     [api, overlayOpacity, updateGlobals],
@@ -160,7 +167,7 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const value = Number(event.target.value);
       updateGlobals({ [OVERLAY_OPACITY_KEY]: value / 100 });
-      api.setQueryParams({ figmaOverlayOpacity: String(value) });
+      api.setQueryParams({ [URL_PARAM_OVERLAY_OPACITY]: String(value) });
     },
     [api, updateGlobals],
   );
@@ -169,7 +176,8 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
     setAnalysisState('loading');
     setAnalysisMessage('Analyzing screenshot against Figma overlay...');
     setAnalysisResult(null);
-    emit(CHANNEL_REQUEST_SCREENSHOT, { purpose: 'analyze', storyId });
+    const payload: RequestScreenshotPayload = { purpose: 'analyze', storyId };
+    emit(CHANNEL_REQUEST_SCREENSHOT, payload);
   }, [emit, storyId]);
 
   const handleAnalysisModalOpenChange = useCallback(

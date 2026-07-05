@@ -1,11 +1,7 @@
 import React from 'react';
 import { Button, Modal } from 'storybook/internal/components';
 
-interface AnalysisResult {
-  figmaSrc: string;
-  screenshotSrc: string;
-  similarity: number;
-}
+import type { AnalysisResult } from '../constants';
 
 interface AnalysisModalProps {
   isOpen: boolean;

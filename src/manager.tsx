@@ -2,10 +2,10 @@ import React from 'react';
 import { addons, types } from 'storybook/manager-api';
 
 import { FigmaSyncTool } from './components/FigmaSyncTool';
-import { ADDON_ID } from './constants';
+import { ADDON_ID, TOOL_ID } from './constants';
 
 addons.register(ADDON_ID, () => {
-  addons.add(`${ADDON_ID}/figma-sync`, {
+  addons.add(TOOL_ID, {
     type: types.TOOL,
     title: 'Figma Sync',
     match: ({ viewMode }) => !!(viewMode && viewMode.match(/^(story)$/)),

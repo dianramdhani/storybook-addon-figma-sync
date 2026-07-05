@@ -7,6 +7,7 @@ import { PNG } from 'pngjs';
 import type { Channel } from 'storybook/internal/channels';
 
 import {
+  type AnalysisResult,
   CHANNEL_ANALYSIS_ERROR,
   CHANNEL_ANALYSIS_READY,
   CHANNEL_DELETE_SCREENSHOT,
@@ -14,10 +15,13 @@ import {
   CHANNEL_OVERLAY_ERROR,
   CHANNEL_OVERLAY_READY,
   CHANNEL_SAVE_SCREENSHOT,
+  type FetchOverlayPayload,
+  type FigmaSyncErrorPayload,
   getScreenshotAssetPath,
   getScreenshotFilename,
   getStoryOverlayAssetPath,
   getStoryOverlayFilename,
+  type SaveScreenshotPayload,
 } from './constants';
 
 const FIGMA_STATIC_DIR = path.join(process.cwd(), '.storybook', '.storybook-addon-sync-figma');
@@ -165,48 +169,51 @@ function analyzeSavedImages(storyId: string) {
   const similarity = Number((((totalPixels - diffPixels) / totalPixels) * 100).toFixed(2));
   const version = Date.now();
 
-  return {
+  const result: AnalysisResult = {
     figmaSrc: getOverlayAssetUrl(storyId, version),
     screenshotSrc: getScreenshotAssetUrl(version),
     similarity,
   };
+
+  return result;
 }
 
 export const experimental_serverChannel = (channel: Channel, options: FigmaSyncAddonOptions = {}) => {
-  channel.on(
-    CHANNEL_SAVE_SCREENSHOT,
-    (data: { image: string; purpose?: 'capture' | 'analyze'; storyId?: string | null }) => {
-      try {
-        const base64Data = data.image.replace(/^data:image\/png;base64,/, '');
-        const buffer = Buffer.from(base64Data, 'base64');
+  channel.on(CHANNEL_SAVE_SCREENSHOT, (data: SaveScreenshotPayload) => {
+    try {
+      const base64Data = data.image.replace(/^data:image\/png;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
 
-        ensureStaticDir();
-        const filePath = getScreenshotFilePath();
-        fs.writeFileSync(filePath, buffer);
+      ensureStaticDir();
+      const filePath = getScreenshotFilePath();
+      fs.writeFileSync(filePath, buffer);
 
-        if (data.purpose === 'analyze' && data.storyId) {
-          const result = analyzeSavedImages(data.storyId);
-          channel.emit(CHANNEL_ANALYSIS_READY, result);
-        }
-      } catch (err) {
-        if (data.purpose === 'analyze') {
-          const message = err instanceof Error ? err.message : 'Unknown error while analyzing screenshot';
-          channel.emit(CHANNEL_ANALYSIS_ERROR, { message });
-        }
-        console.error('[Figma Sync] Failed to save screenshot:', err);
+      if (data.purpose === 'analyze' && data.storyId) {
+        const result = analyzeSavedImages(data.storyId);
+        channel.emit(CHANNEL_ANALYSIS_READY, result);
       }
-    },
-  );
+    } catch (err) {
+      if (data.purpose === 'analyze') {
+        const errorPayload: FigmaSyncErrorPayload = {
+          message: err instanceof Error ? err.message : 'Unknown error while analyzing screenshot',
+        };
+        channel.emit(CHANNEL_ANALYSIS_ERROR, errorPayload);
+      }
+      console.error('[Figma Sync] Failed to save screenshot:', err);
+    }
+  });
 
-  channel.on(CHANNEL_FETCH_OVERLAY, async (data: { figmaUrl: string; storyId: string }) => {
+  channel.on(CHANNEL_FETCH_OVERLAY, async (data: FetchOverlayPayload) => {
     try {
       await downloadOverlayFromFigma(data.figmaUrl, data.storyId, options);
       channel.emit(CHANNEL_OVERLAY_READY, {
         figmaUrl: data.figmaUrl,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error while downloading Figma overlay';
-      channel.emit(CHANNEL_OVERLAY_ERROR, { message });
+      const errorPayload: FigmaSyncErrorPayload = {
+        message: err instanceof Error ? err.message : 'Unknown error while downloading Figma overlay',
+      };
+      channel.emit(CHANNEL_OVERLAY_ERROR, errorPayload);
       console.error('[Figma Sync] Failed to download overlay:', err);
     }
   });
