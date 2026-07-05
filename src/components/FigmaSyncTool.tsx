@@ -1,9 +1,21 @@
 import { LinkIcon } from '@storybook/icons';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Form, WithTooltip } from 'storybook/internal/components';
-import { useChannel, useGlobals, useParameter, useStorybookApi } from 'storybook/manager-api';
+import { Button, Form, PopoverProvider } from 'storybook/internal/components';
+import { useChannel, useGlobals, useStorybookApi } from 'storybook/manager-api';
 
-import { FIGMA_URL_KEY, OVERLAY_OPACITY_KEY, OVERLAY_VISIBLE_KEY } from '../constants';
+import {
+  CHANNEL_FETCH_OVERLAY,
+  CHANNEL_OVERLAY_ERROR,
+  CHANNEL_OVERLAY_READY,
+  CHANNEL_REQUEST_SCREENSHOT,
+  FIGMA_URL_KEY,
+  OVERLAY_OPACITY_KEY,
+  OVERLAY_VISIBLE_KEY,
+} from '../constants';
+
+function getStoryOverlaySrc(storyId: string) {
+  return `/figma-sync-assets/figma-${storyId}.png`;
+}
 
 function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -17,12 +29,36 @@ function Field({ label, children }: { label: React.ReactNode; children: React.Re
 export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const [globals, updateGlobals] = useGlobals();
   const api = useStorybookApi();
-  const emit = useChannel({});
-  const figmaOverlaySrc = useParameter<string | undefined>('figmaOverlaySrc');
+  const storyId = api.getCurrentStoryData()?.id || '';
 
   const figmaUrl = (globals[FIGMA_URL_KEY] as string) || '';
   const showOverlay = Boolean(globals[OVERLAY_VISIBLE_KEY]);
   const overlayOpacity = Math.round(((globals[OVERLAY_OPACITY_KEY] as number | undefined) ?? 0.5) * 100);
+  const [fetchState, setFetchState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [fetchMessage, setFetchMessage] = useState('');
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
+  const [overlayVersion, setOverlayVersion] = useState(() => Date.now());
+  const [overlayAvailable, setOverlayAvailable] = useState(false);
+  const overlayImageSrc = `${getStoryOverlaySrc(storyId)}?t=${overlayVersion}`;
+
+  const emit = useChannel({
+    [CHANNEL_OVERLAY_READY]: (payload: { figmaUrl: string }) => {
+      setFetchState('success');
+      setFetchMessage('Overlay downloaded');
+      setOverlayVersion(Date.now());
+      setOverlayAvailable(true);
+      updateGlobals({
+        [FIGMA_URL_KEY]: payload.figmaUrl,
+        [OVERLAY_VISIBLE_KEY]: true,
+      });
+      api.setQueryParams({ figmaOverlayVisible: '1' });
+      setIsTooltipVisible(false);
+    },
+    [CHANNEL_OVERLAY_ERROR]: (payload: { message: string }) => {
+      setFetchState('error');
+      setFetchMessage(payload.message);
+    },
+  });
 
   const [localFigmaUrl, setLocalFigmaUrl] = useState(figmaUrl);
   const [localShowOverlay, setLocalShowOverlay] = useState(showOverlay);
@@ -42,6 +78,37 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   useEffect(() => {
     setLocalOverlayOpacity(overlayOpacity);
   }, [overlayOpacity]);
+
+  useEffect(() => {
+    setOverlayVersion(Date.now());
+  }, [storyId]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    const img = new Image();
+
+    img.onload = () => {
+      if (!isCancelled) setOverlayAvailable(true);
+    };
+
+    img.onerror = () => {
+      if (!isCancelled) setOverlayAvailable(false);
+    };
+
+    img.src = overlayImageSrc;
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [overlayImageSrc]);
+
+  useEffect(() => {
+    if (overlayAvailable || !showOverlay) return;
+
+    setLocalShowOverlay(false);
+    updateGlobals({ [OVERLAY_VISIBLE_KEY]: false });
+    api.setQueryParams({ figmaOverlayVisible: null });
+  }, [api, overlayAvailable, showOverlay, updateGlobals]);
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -71,7 +138,7 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
     const iframe = document.querySelector('#storybook-preview-iframe') as HTMLElement | null;
     if (!iframe) return;
 
-    if (!showOverlay || !figmaOverlaySrc) {
+    if (!showOverlay || !overlayImageSrc) {
       iframe.style.width = '';
       iframe.style.height = '';
       return;
@@ -83,13 +150,16 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
       iframe.style.height = `${img.naturalHeight}px`;
       console.log('Figma overlay image loaded:', img.naturalWidth, img.naturalHeight);
     };
-    img.src = figmaOverlaySrc;
-  }, [showOverlay, figmaOverlaySrc]);
+    img.src = overlayImageSrc;
+  }, [overlayImageSrc, showOverlay]);
 
   const handleSubmit = useCallback(() => {
+    setFetchState('loading');
+    setFetchMessage('Downloading overlay from Figma...');
     updateGlobals({ [FIGMA_URL_KEY]: localFigmaUrl });
-    emit('figma-sync/request-screenshot');
-  }, [localFigmaUrl, updateGlobals, emit]);
+    emit(CHANNEL_FETCH_OVERLAY, { figmaUrl: localFigmaUrl, storyId });
+    emit(CHANNEL_REQUEST_SCREENSHOT);
+  }, [emit, localFigmaUrl, storyId, updateGlobals]);
 
   const handleVisibleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,12 +184,13 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   );
 
   return (
-    <WithTooltip
+    <PopoverProvider
       placement="bottom"
-      trigger="click"
       closeOnOutsideClick
+      visible={isTooltipVisible}
+      onVisibleChange={setIsTooltipVisible}
       aria-label="Figma Sync settings popover"
-      tooltip={() => (
+      popover={() => (
         <div
           style={{
             padding: '12px',
@@ -142,25 +213,40 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
               </Button>
             </div>
           </Field>
-          <Field label={`Overlay: ${localShowOverlay ? ` ${Math.round(localOverlayOpacity)}%` : ' Off'}`}>
-            <input type="checkbox" checked={localShowOverlay} onChange={handleVisibleChange} />
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={localOverlayOpacity}
-              onChange={handleOpacityChange}
-              disabled={!localShowOverlay}
-              style={{ flex: 1, width: '100%' }}
-            />
-          </Field>
+          {overlayAvailable ? (
+            <Field label={`Overlay: ${localShowOverlay ? ` ${Math.round(localOverlayOpacity)}%` : ' Off'}`}>
+              <input type="checkbox" checked={localShowOverlay} onChange={handleVisibleChange} />
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={localOverlayOpacity}
+                onChange={handleOpacityChange}
+                disabled={!localShowOverlay}
+                style={{ flex: 1, width: '100%' }}
+              />
+            </Field>
+          ) : null}
+          {fetchMessage ? (
+            <div
+              style={{
+                fontSize: '12px',
+                color: fetchState === 'error' ? '#d32f2f' : '#666',
+              }}
+            >
+              {fetchMessage}
+            </div>
+          ) : null}
+          {!overlayAvailable && fetchState !== 'loading' ? (
+            <div style={{ fontSize: '12px', color: '#666' }}>Overlay PNG belum tersedia untuk story ini.</div>
+          ) : null}
         </div>
       )}
     >
       <Button variant={globals[FIGMA_URL_KEY] ? 'outline' : 'ghost'} title="Figma Sync" ariaLabel="Figma Sync Settings">
         <LinkIcon />
       </Button>
-    </WithTooltip>
+    </PopoverProvider>
   );
 });

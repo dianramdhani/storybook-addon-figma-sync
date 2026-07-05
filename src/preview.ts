@@ -8,10 +8,16 @@ import type {
   StoryContext,
 } from 'storybook/internal/types';
 
-import { FIGMA_URL_KEY, KEY, OVERLAY_OPACITY_KEY, OVERLAY_VISIBLE_KEY } from './constants';
+import {
+  CHANNEL_REQUEST_SCREENSHOT,
+  CHANNEL_SAVE_SCREENSHOT,
+  FIGMA_URL_KEY,
+  OVERLAY_OPACITY_KEY,
+  OVERLAY_VISIBLE_KEY,
+} from './constants';
 
 const channel = addons.getChannel();
-channel.on('figma-sync/request-screenshot', async () => {
+channel.on(CHANNEL_REQUEST_SCREENSHOT, async () => {
   if (!document) return;
   const element = document.getElementById('storybook-root') || document.body;
   try {
@@ -24,7 +30,7 @@ channel.on('figma-sync/request-screenshot', async () => {
       },
       cacheBust: true,
     });
-    channel.emit('figma-sync/save-screenshot', { image: dataUrl });
+    channel.emit(CHANNEL_SAVE_SCREENSHOT, { image: dataUrl });
   } catch (error) {
     console.error('[Figma Sync] Failed to take screenshot:', error);
   }
@@ -48,8 +54,12 @@ function getInitialGlobalsFromUrl(): Record<string, unknown> {
 
 const urlGlobals = getInitialGlobalsFromUrl();
 
+function getStoryOverlaySrc(storyId: string) {
+  return `/figma-sync-assets/figma-${storyId}.png`;
+}
+
 const withOverlay = (StoryFn: StoryFunction<Renderer>, context: StoryContext<Renderer>) => {
-  const overlaySrc = context.parameters.figmaOverlaySrc as string | undefined;
+  const overlaySrc = getStoryOverlaySrc(context.id);
   const isVisible = Boolean(context.globals[OVERLAY_VISIBLE_KEY]);
   const overlayOpacity = (context.globals[OVERLAY_OPACITY_KEY] as number | undefined) ?? 0.5;
 
@@ -94,7 +104,6 @@ const preview: ProjectAnnotations<Renderer> = {
     },
   },
   initialGlobals: {
-    [KEY]: false,
     [FIGMA_URL_KEY]: '',
     [OVERLAY_VISIBLE_KEY]: false,
     [OVERLAY_OPACITY_KEY]: 0.5,
