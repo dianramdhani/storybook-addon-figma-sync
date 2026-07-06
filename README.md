@@ -1,223 +1,270 @@
 # Storybook Addon Figma Sync
 
-Addon Storybook untuk membantu sync figma
+[![npm version](https://img.shields.io/npm/v/storybook-addon-figma-sync.svg)](https://www.npmjs.com/package/storybook-addon-figma-sync)
+[![Storybook version](https://img.shields.io/badge/storybook-%3E%3D8.0.0-ff69b4.svg)](https://storybook.js.org/)
+[![License: MIT](https://img.shields.io/npm/l/storybook-addon-figma-sync.svg)](./LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
-### Development scripts
+A Storybook addon designed to sync Figma design frames directly into Storybook stories. It enables developers to overlay mockups on top of live components with adjustable opacity, auto-resize the Storybook preview iframe to match Figma dimensions, and perform pixel-level visual regression diffing directly in the browser to ensure absolute design fidelity.
 
-- `yarn start` runs babel in watch mode and starts Storybook
-- `yarn build` build and package your addon code
+---
 
-### Switch from TypeScript to JavaScript
+## Key Features
 
-Don't want to use TypeScript? We offer a handy eject command: `yarn eject-ts`
+- **Figma Design Integration**: Input any Figma Frame URL in the Storybook toolbar to download and display design mockups.
+- **Interactive Visual Overlay**: Render the Figma mockup directly over your live component with customizable opacity (0% to 100%) and a toggle switch.
+- **Automated Component Sizing**: Storybook's preview iframe automatically resizes to the exact dimensions of the Figma design frame, ensuring realistic component alignment.
+- **Pixel-Matching Similarity Analysis**: Captures a high-fidelity DOM screenshot of the rendered component using `html-to-image` and compares it pixel-by-pixel with the Figma design using `pixelmatch`.
+- **Advanced Analysis Modal**: Switch between three comparison views in the visual audit panel:
+  - **Side-by-Side**: Compare the Figma design and live component screenshot side by side.
+  - **Overlay (Interactive)**: A draggable and zoomable canvas layer where the Figma mockup is overlaid on the component screenshot.
+  - **Diff Only**: A visual diff highlighting the pixel mismatch errors in red.
+- **Caching Mechanism**: Downloaded Figma design images are stored locally under `.storybook/.storybook-addon-sync-figma/` for fast loading and reduced API consumption.
 
-This will convert all code to JS. It is a destructive process, so we recommended running this before you start writing any code.
+---
 
-## What's included?
+## Technology Stack
 
-![Demo](https://user-images.githubusercontent.com/42671/107857205-e7044380-6dfa-11eb-8718-ad02e3ba1a3f.gif)
+- **React 19**: Drives the Storybook addon manager UI, interactive comparison canvas, and modal interfaces.
+- **Storybook 8+**: Integrates with the modern Storybook core channels, globals, parameters, and component registry.
+- **TypeScript**: Ensures type safety across all frontend and backend middleware.
+- **Vite & Webpack**: Exposes Node.js dev server middlewares to serve and cache Figma assets.
+- **TailwindCSS v4**: Integrated for styling storybook components and styling tests.
+- **Pixelmatch**: A pixel-level image comparison library written in JavaScript.
+- **pngjs**: Enables direct PNG decoding, diff output, and encoding inside the Node.js server.
+- **html-to-image**: Converts DOM nodes to high-resolution PNG data URLs on the client.
+- **tsup**: Bundler configured to output targeted ESM modules for the manager, preview, and Node.js preset.
+- **Vitest**: Used as the test runner for unit tests.
 
-The addon code lives in `src`. For the trimmed version of this template, the only UI surface is the toolbar entry in `src/components/Tool.tsx`, which is registered from `src/manager.tsx`.
+---
 
-`src/preview.ts` keeps the addon global state initialized, and `src/constants.ts` holds the addon id and global key.
+## Project Architecture
 
-The rest of the scaffold has been removed so you start from a toolbar-only addon instead of the full sample kit.
+The addon is structured into three main layers: **Manager UI** (the settings toolbar), **Preview iframe** (overlay and screenshot capture), and **Node server preset** (handles Figma API interaction and image comparisons).
 
-Lastly, configure you addon name in `src/constants.ts`.
+### Data Flow & Component Interaction
 
-### Bundling
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Developer
+    participant Manager as Storybook Manager Panel (FigmaSyncTool)
+    participant Preview as Storybook Preview Iframe (withOverlay)
+    participant NodeServer as Node Dev Server Middleware (preset.ts)
+    participant FigmaAPI as Figma REST API
 
-Addons can interact with a Storybook project in multiple ways. It is recommended to familiarize yourself with [the basics](https://storybook.js.org/docs/react/addons/introduction) before getting started.
-
-- Manager entries are used to add UI or behavior to the Storybook manager UI.
-- Preview entries are used to add UI or behavior to the preview iframe where stories are rendered.
-- Presets are used to modify the Storybook configuration, similar to how [users can configure their `main.ts` configurations](https://storybook.js.org/docs/react/api/main-config).
-
-Since each of these places represents a different environment with different features and modules, it is also recommended to split and build your modules accordingly. This addon-kit comes with a preconfigured [bundling configuration](./tsup.config.ts) that supports this split, and you are free to modify and extend it as needed.
-
-You can define which modules match which environments in the [`package.json#bundler`](./package.json) property:
-
-- `exportEntries` is a list of module entries that users can manually import from anywhere they need to. For example, you could have decorators that users need to import into their `preview.ts` file or utility functions that can be used in their `main.ts` files.
-- `managerEntries` is a list of module entries meant only for the manager UI. These modules will be bundled to ESM and won't include types since they are mostly loaded by Storybook directly.
-- `previewEntries` is a list of module entries meant only for the preview UI. These modules will be bundled to ESM and won't include types since they are mostly loaded by Storybook directly.
-
-Manager and preview entries are only used in the browser so they only output ESM modules. Export entries could be used both in the browser and in Node depending on their use case, so they both output ESM and CJS modules.
-
-#### Globalized packages
-
-Storybook provides a predefined set of packages that are available in the manager UI and the preview UI. In the final bundle of your addon, these packages should not be included. Instead, the imports should stay in place, allowing Storybook to replace those imports with the actual packages during the Storybook build process.
-
-The list of packages differs between the manager and the preview, which is why there is a slight difference between `managerEntries` and `previewEntries`. Most notably, `react` and `react-dom` are prebundled in the manager but not in the preview. This means that your manager entries can use React to build UI without bundling it or having a direct reference to it. Therefore, it is safe to have React as a `devDependency` even though you are using it in production. _Requiring React as a peer dependency would unnecessarily force your users to install React._
-
-An exception to this rule is if you are using React to inject UI into the preview, which does not come prebundled with React. In such cases, you need to move `react` and `react-dom` to a peer dependency. However, we generally advise against this pattern since it would limit the usage of your addon to React-based Storybooks.
-
-### Metadata
-
-Storybook addons are listed in the [catalog](https://storybook.js.org/addons) and distributed through package registries. The catalog is populated by querying registry metadata in `package.json`. This project has been configured with sample data. Learn more about available options in the [Addon metadata docs](https://storybook.js.org/docs/react/addons/addon-catalog#addon-metadata).
-
-## Documentation
-
-To help the community use your addon and understand its capabilities, please document it thoroughly.
-
-To get started, replace this README with the content in this sample template.
-
-### Sample documentation template
-
-````md
-# My Addon
-
-## Installation
-
-First, install the package.
-
-```sh
-yarn add --dev storybook-addon-figma-sync
+    Developer->>Manager: Input Figma Frame URL & Submit
+    Manager->>NodeServer: Emit CHANNEL_FETCH_OVERLAY (URL, storyId)
+    NodeServer->>FigmaAPI: Fetch Figma Frame Node Image (with FIGMA_TOKEN)
+    FigmaAPI-->>NodeServer: Return temporary Image URL
+    NodeServer->>NodeServer: Download & save locally as figma-<storyId>.png
+    NodeServer-->>Manager: Emit CHANNEL_OVERLAY_READY (Globals updated)
+    Manager->>Preview: Update global states (isVisible = true)
+    Preview->>Preview: Render Figma image overlay on top of story component
+    Developer->>Manager: Click "Analyze Screenshot"
+    Manager->>Preview: Emit CHANNEL_REQUEST_SCREENSHOT
+    Preview->>Preview: Capture DOM screenshot via html-to-image
+    Preview->>NodeServer: Emit CHANNEL_SAVE_SCREENSHOT (base64 PNG)
+    NodeServer->>NodeServer: Save screenshot & compare with Figma overlay (pixelmatch)
+    NodeServer->>NodeServer: Generate Diff PNG
+    NodeServer-->>Manager: Emit CHANNEL_ANALYSIS_READY (Similarity data & paths)
+    Manager->>Developer: Open Analysis Modal (Side-by-side, Overlay, Diff)
 ```
 
-Then, register it as an addon in `.storybook/main.js`.
+---
 
-```ts
-// .storybook/main.ts
+## Getting Started
 
-// Replace your-framework with the framework you are using (e.g., react-webpack5, vue3-vite)
-import type { StorybookConfig } from '@storybook/your-framework';
+### Prerequisites
+
+- A Figma account and a **Figma Personal Access Token (PAT)**. You can generate one in Figma by going to `Settings > Account > Personal access tokens`.
+
+### Installation
+
+Install the package as a development dependency using your package manager:
+
+```bash
+yarn add -D storybook-addon-figma-sync
+# or
+npm install --save-dev storybook-addon-figma-sync
+# or
+pnpm add -D storybook-addon-figma-sync
+```
+
+### Configuration
+
+#### 1. Register the Addon
+
+Add the addon to your `.storybook/main.ts` file:
+
+```typescript
+import type { StorybookConfig } from '@storybook/react-vite';
 
 const config: StorybookConfig = {
-  // ...rest of config
-  addons: [
-    '@storybook/addon-docs'
-    'storybook-addon-figma-sync', // 👈 register the addon here
-  ],
-};
-
-export default config;
-```
-
-## Usage
-
-The primary way to use this addon is to define the `exampleParameter` parameter. You can do this the
-component level, as below, to affect all stories in the file, or you can do it for a single story.
-
-```ts
-// Benefits.stories.tsx
-
-// Replace your-framework with the name of your framework
-import type { Meta } from '@storybook/your-framework';
-
-import { Button } from './Button';
-
-const meta: Meta<typeof Button> = {
-  component: Button,
-  parameters: {
-    myAddon: {
-      exampleParameter: true,
-      // See API section below for available parameters
-    },
-  },
-};
-
-export default meta;
-```
-
-Another way to use the addon is...
-
-## API
-
-### Parameters
-
-This addon contributes the following parameters to Storybook, under the `myAddon` namespace:
-
-#### `disable`
-
-Type: `boolean`
-
-Disable this addon's behavior. This parameter is most useful to allow overriding at more specific
-levels. For example, if this parameter is set to true at the project level, it could then be
-re-enabled by setting it to false at the meta (component) or story level.
-
-### Options
-
-When registering this addon, you can configure it with the following options, which are passed when
-registering the addon, like so:
-
-```ts
-// .storybook/main.ts
-
-// Replace your-framework with the framework you are using (e.g., react-webpack5, vue3-vite)
-import type { StorybookConfig } from '@storybook/your-framework';
-
-const config: StorybookConfig = {
-  // ...rest of config
+  stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|ts|tsx)'],
   addons: [
     '@storybook/addon-docs',
     {
       name: 'storybook-addon-figma-sync',
       options: {
-        // 👈 options for storybook-addon-figma-sync go here
+        envLocation: '../.env', // Path to your environment file containing FIGMA_TOKEN
       },
     },
   ],
+  // Map local cache directory to static URL in Storybook
+  staticDirs: [{ from: './.storybook-addon-sync-figma', to: '/figma-sync-assets' }],
+  framework: '@storybook/react-vite',
 };
 
 export default config;
 ```
 
-#### `useExperimentalBehavior`
+#### 2. Set Up Environment Variables
 
-Type: `boolean`
-
-Enable experimental behavior to...
-````
-
-## Release Management
-
-### Setup
-
-This project is configured to use [auto](https://github.com/intuit/auto) for release management. It generates a changelog and pushes it to both GitHub and npm. Therefore, you need to configure access to both:
-
-- [`NPM_TOKEN`](https://docs.npmjs.com/creating-and-viewing-access-tokens#creating-access-tokens) Create a token with both _Read and Publish_ permissions.
-- [`GH_TOKEN`](https://github.com/settings/tokens) Create a token with the `repo` scope.
-
-Then open your `package.json` and edit the following fields:
-
-- `name`
-- `author`
-- `repository`
-
-#### Local
-
-To use `auto` locally create a `.env` file at the root of your project and add your tokens to it:
+Create a `.env` file at the root of your project:
 
 ```bash
-GH_TOKEN=<value you just got from GitHub>
-NPM_TOKEN=<value you just got from npm>
+FIGMA_TOKEN=your_figma_personal_access_token_here
 ```
 
-Lastly, **create labels on GitHub**. You’ll use these labels in the future when making changes to the package.
+#### 3. Update Git Ignore
+
+Add the local cache folder to your `.gitignore` to prevent committing cached Figma designs and screenshot differences:
 
 ```bash
-yarn auto create-labels
+.storybook/.storybook-addon-sync-figma/
 ```
 
-If you check on GitHub, you’ll now see a set of labels that `auto` would like you to use. Use these to tag future pull requests.
+---
 
-#### GitHub Actions
+## Project Structure
 
-This template comes with GitHub actions already set up to publish your addon anytime someone pushes to your repository.
-
-Go to `Settings > Secrets`, click `New repository secret`, and add your `NPM_TOKEN`.
-
-### Creating a release
-
-To create a release locally you can run the following command, otherwise the GitHub action will make the release for you.
-
-```sh
-yarn release
+```
+storybook-addon-figma-sync/
+├── .storybook/                     # Local Storybook sandbox configuration
+│   ├── .storybook-addon-sync-figma/ # Local cache directory for Figma downloads & diffs (Git ignored)
+│   ├── local-preset.ts             # Sandbox entry points importing dist assets
+│   ├── main.ts                     # Sandboxed Storybook config
+│   └── preview.ts                  # Sandbox preview globals
+├── scripts/                        # Automation & prepublish scripts
+├── src/                            # Source directory
+│   ├── components/                 # React UI Components
+│   │   ├── FigmaSyncTool.tsx       # Toolbar panel settings button & popover
+│   │   ├── AnalysisModal.tsx       # Side-by-side, overlay, and diff comparison panel
+│   │   └── useOverlayImage.ts      # Hooks to verify image availability & resize preview iframe
+│   ├── lib/                        # Helper libraries
+│   │   ├── figma-sync-preview.ts   # URL parser and browser screenshot capturing configuration
+│   │   ├── figma-sync-server.ts    # Node.js file writer, Figma API fetcher, and pixelmatch comparison
+│   │   ├── load-image.ts           # Async image loader utility
+│   │   └── utils.ts                # Tailwind merge helper (cn)
+│   ├── constants.ts                # Channel event names, storybook keys, and default values
+│   ├── global.d.ts                 # Global type definitions
+│   ├── index.css                   # Custom styles
+│   ├── index.ts                    # Addon default exported preview config
+│   ├── manager.tsx                 # Register toolbar buttons in Storybook Manager
+│   ├── preset.ts                   # Webpack and Vite middlewares configuration for Storybook
+│   └── preview.ts                  # Storybook iframe setup, global parameters, and overlay decorator
+├── package.json                    # Package metadata, script pipelines, dependencies
+├── tsconfig.json                   # Strict TypeScript compiler options
+└── tsup.config.ts                  # Bundler configuration separating Manager, Preview, and Node targets
 ```
 
-That will:
+---
 
-- Build and package the addon code
-- Bump the version
-- Push a release to GitHub and npm
-- Push a changelog to GitHub
+## Development Workflow
+
+### Local Development
+
+To run the Storybook project locally and develop the addon:
+
+```bash
+yarn start
+```
+
+This runs the `tsup` compiler in watch mode (rebuilding code in real-time) and launches the Storybook developer server concurrently.
+
+### Build and Package
+
+To build the project for production distribution:
+
+```bash
+yarn build
+```
+
+This uses `tsup` to bundle all inputs. It splits files according to their execution targets:
+
+- `dist/manager.js` (Browser Manager UI)
+- `dist/preview.js` & `dist/preview.d.ts` (Browser Preview Iframe)
+- `dist/preset.js` (Node.js Dev Server Middlewares)
+
+### Ejecting TypeScript
+
+If you wish to convert this template to standard JavaScript, you can run:
+
+```bash
+yarn eject-ts
+```
+
+> [!WARNING]
+> This is a destructive, irreversible process. We recommend running this before you write any custom addon code.
+
+---
+
+## Coding Standards
+
+This project enforces strict coding quality gates:
+
+- **Linting**: Rules configured using [ESLint](./eslint.config.js). Run checks using `yarn lint` or apply fixes with `yarn lint:fix`.
+- **Formatting**: Styles managed using [Prettier](./.prettierrc). Run formatting using `yarn format`.
+- **Type Safety**: Managed by TypeScript with strict checks. Checked automatically during builds.
+- **Git Hooks**: Integrated with [Husky](./.husky) and [lint-staged](./package.json) to format and lint changes automatically on git commit.
+- **Commit Conventions**: Conventional commits are enforced using `@commitlint/cli` and `commitlint.config.js`.
+
+---
+
+## Testing
+
+Backend helpers, asset file structures, and pixel comparisons are tested using **Vitest**.
+
+To run unit tests:
+
+```bash
+yarn test
+```
+
+Tests cover:
+
+- base64 PNG data URL decoding.
+- Dev-server disk operations (screenshot file writes and deletions).
+- Image similarity percentage calculations.
+- Error handling (e.g. throwing error outputs when Figma design dimensions mismatch Storybook rendering).
+
+---
+
+## Contributing
+
+Contributions are welcome! Please follow these guidelines:
+
+1. **Issues**: Report bugs or suggest features by creating an issue.
+2. **Branching**: Create descriptive branch names (e.g., `feat/add-fit-mode` or `fix/opacity-slider`).
+3. **Pull Requests**:
+   - Ensure all tests pass (`yarn test`).
+   - Confirm code is formatted and linted.
+   - Use conventional commit messages.
+
+### Release Management
+
+This repository is configured to use [Auto](https://github.com/intuit/auto) for publishing and release management:
+
+1. Make changes and tag your Pull Request with standard labels (e.g. `major`, `minor`, `patch`).
+2. Once merged, the GitHub Action automatically bumps the version, writes the changelog, and publishes the new bundle to both GitHub and npm.
+3. To release manually:
+   ```bash
+   yarn release
+   ```
+
+---
+
+## License
+
+This project is licensed under the **MIT License**. For full details, see the [LICENSE](./LICENSE) file.
