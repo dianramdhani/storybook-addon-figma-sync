@@ -15,6 +15,7 @@ interface ImageViewerProps {
   alt: string;
   scale?: number;
   offset?: { x: number; y: number };
+  isDarkMode?: boolean;
   onPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerMove?: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerUp?: (e: React.PointerEvent<HTMLDivElement>) => void;
@@ -27,14 +28,18 @@ const ImageViewer = React.memo(function ImageViewer({
   alt,
   scale = 1,
   offset = { x: 0, y: 0 },
+  isDarkMode = true,
   onPointerDown,
   onPointerMove,
   onPointerUp,
   onWheel,
 }: ImageViewerProps) {
+  const bgColor = isDarkMode ? '#16191f' : '#f0f0f0';
+  const textColor = isDarkMode ? 'rgba(255,255,255,0.72)' : 'rgba(0,0,0,0.72)';
+
   return (
     <div style={{ display: 'flex', minHeight: 0, flexDirection: 'column', gap: '12px', flex: 1 }}>
-      <div style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.72)' }}>{title}</div>
+      <div style={{ fontSize: '14px', fontWeight: 600, color: textColor }}>{title}</div>
       <div
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -45,7 +50,7 @@ const ImageViewer = React.memo(function ImageViewer({
           minHeight: 0,
           overflow: 'hidden',
           borderRadius: '12px',
-          background: '#16191f',
+          background: bgColor,
           padding: '16px',
           display: 'flex',
           justifyContent: 'center',
@@ -91,6 +96,7 @@ interface SideBySideViewProps {
   result: AnalysisResult;
   scale: number;
   offset: { x: number; y: number };
+  isDarkMode: boolean;
   onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
@@ -101,6 +107,7 @@ const SideBySideView = React.memo(function SideBySideView({
   result,
   scale,
   offset,
+  isDarkMode,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -122,6 +129,7 @@ const SideBySideView = React.memo(function SideBySideView({
         alt="Figma overlay"
         scale={scale}
         offset={offset}
+        isDarkMode={isDarkMode}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -133,6 +141,7 @@ const SideBySideView = React.memo(function SideBySideView({
         alt="Storybook screenshot"
         scale={scale}
         offset={offset}
+        isDarkMode={isDarkMode}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -147,6 +156,7 @@ interface OverlayViewProps {
   opacity: number;
   scale: number;
   offset: { x: number; y: number };
+  isDarkMode: boolean;
   onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
@@ -158,11 +168,14 @@ const OverlayView = React.memo(function OverlayView({
   opacity,
   scale,
   offset,
+  isDarkMode,
   onPointerDown,
   onPointerMove,
   onPointerUp,
   onWheel,
 }: OverlayViewProps) {
+  const bgColor = isDarkMode ? '#16191f' : '#f0f0f0';
+
   return (
     <div
       style={{
@@ -182,7 +195,7 @@ const OverlayView = React.memo(function OverlayView({
           minHeight: 0,
           overflow: 'hidden',
           borderRadius: '12px',
-          background: '#16191f',
+          background: bgColor,
           padding: '16px',
           display: 'flex',
           justifyContent: 'center',
@@ -239,6 +252,7 @@ interface DiffViewProps {
   result: AnalysisResult;
   scale: number;
   offset: { x: number; y: number };
+  isDarkMode: boolean;
   onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
@@ -249,6 +263,7 @@ const DiffView = React.memo(function DiffView({
   result,
   scale,
   offset,
+  isDarkMode,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -262,6 +277,7 @@ const DiffView = React.memo(function DiffView({
         alt="Pixel diff"
         scale={scale}
         offset={offset}
+        isDarkMode={isDarkMode}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -272,6 +288,7 @@ const DiffView = React.memo(function DiffView({
 });
 
 export function AnalysisModal({ isOpen, result, onOpenChange }: AnalysisModalProps) {
+  const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [mode, setMode] = React.useState<'side-by-side' | 'overlay' | 'diff'>('side-by-side');
   const [overlayOpacity, setOverlayOpacity] = React.useState<number>(0.5);
 
@@ -366,11 +383,28 @@ export function AnalysisModal({ isOpen, result, onOpenChange }: AnalysisModalPro
     [transform.scale],
   );
 
+  const handleToggleDarkMode = React.useCallback(() => {
+    setIsDarkMode((prev) => !prev);
+  }, []);
+
   React.useEffect(() => {
     return () => {
       if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
     };
   }, []);
+
+  const viewProps = React.useMemo(
+    () => ({
+      scale: transform.scale,
+      offset: transform.offset,
+      isDarkMode,
+      onPointerDown: handlePointerDown,
+      onPointerMove: handlePointerMove,
+      onPointerUp: handlePointerUp,
+      onWheel: handleWheel,
+    }),
+    [transform.scale, transform.offset, isDarkMode, handlePointerDown, handlePointerMove, handlePointerUp, handleWheel],
+  );
 
   return (
     <Modal open={isOpen} onOpenChange={onOpenChange} ariaLabel="Figma analysis result" width="100vw" height="100vh">
@@ -396,11 +430,29 @@ export function AnalysisModal({ isOpen, result, onOpenChange }: AnalysisModalPro
         >
           <div />
           <div style={{ fontSize: '24px', fontWeight: 700, textAlign: 'center' }}>
-            {result ? `Kemiripan ${result.similarity}%` : 'Analisis'}
+            {result ? `Similarity: ${result.similarity}%` : 'Analysis Result'}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} ariaLabel={false}>
-              Tutup
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleToggleDarkMode}
+              ariaLabel="Toggle dark/light mode"
+              style={{
+                minWidth: '36px',
+                padding: '0 8px',
+                fontSize: '16px',
+              }}
+            >
+              {isDarkMode ? '🌙' : '☀️'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              ariaLabel="Close analysis modal"
+            >
+              Close
             </Button>
           </div>
         </div>
@@ -421,7 +473,7 @@ export function AnalysisModal({ isOpen, result, onOpenChange }: AnalysisModalPro
                 type="button"
                 variant={mode === 'side-by-side' ? 'solid' : 'outline'}
                 onClick={() => setMode('side-by-side')}
-                ariaLabel={false}
+                ariaLabel="Switch to side-by-side view"
                 style={mode === 'side-by-side' ? { backgroundColor: '#006dea', color: '#ffffff' } : {}}
               >
                 Side by Side
@@ -430,7 +482,7 @@ export function AnalysisModal({ isOpen, result, onOpenChange }: AnalysisModalPro
                 type="button"
                 variant={mode === 'overlay' ? 'solid' : 'outline'}
                 onClick={() => setMode('overlay')}
-                ariaLabel={false}
+                ariaLabel="Switch to overlay view"
                 style={mode === 'overlay' ? { backgroundColor: '#006dea', color: '#ffffff' } : {}}
               >
                 Overlay
@@ -439,7 +491,7 @@ export function AnalysisModal({ isOpen, result, onOpenChange }: AnalysisModalPro
                 type="button"
                 variant={mode === 'diff' ? 'solid' : 'outline'}
                 onClick={() => setMode('diff')}
-                ariaLabel={false}
+                ariaLabel="Switch to diff view"
                 style={mode === 'diff' ? { backgroundColor: '#006dea', color: '#ffffff' } : {}}
               >
                 Diff Only
@@ -469,7 +521,7 @@ export function AnalysisModal({ isOpen, result, onOpenChange }: AnalysisModalPro
                 type="button"
                 variant="outline"
                 onClick={() => setTransform({ type: 'SET_SCALE', payload: transform.scale / 1.2 })}
-                ariaLabel={false}
+                ariaLabel="Zoom out"
                 style={{ minWidth: '36px', padding: '0 8px' }}
               >
                 -
@@ -481,7 +533,7 @@ export function AnalysisModal({ isOpen, result, onOpenChange }: AnalysisModalPro
                 type="button"
                 variant="outline"
                 onClick={() => setTransform({ type: 'SET_SCALE', payload: transform.scale * 1.2 })}
-                ariaLabel={false}
+                ariaLabel="Zoom in"
                 style={{ minWidth: '36px', padding: '0 8px' }}
               >
                 +
@@ -492,7 +544,7 @@ export function AnalysisModal({ isOpen, result, onOpenChange }: AnalysisModalPro
                 onClick={() => {
                   setTransform({ type: 'RESET' });
                 }}
-                ariaLabel={false}
+                ariaLabel="Reset zoom"
                 style={{ fontSize: '12px' }}
               >
                 Reset
@@ -512,40 +564,9 @@ export function AnalysisModal({ isOpen, result, onOpenChange }: AnalysisModalPro
         >
           {result ? (
             <>
-              {mode === 'side-by-side' && (
-                <SideBySideView
-                  result={result}
-                  scale={transform.scale}
-                  offset={transform.offset}
-                  onPointerDown={handlePointerDown}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                  onWheel={handleWheel}
-                />
-              )}
-              {mode === 'overlay' && (
-                <OverlayView
-                  result={result}
-                  opacity={overlayOpacity}
-                  scale={transform.scale}
-                  offset={transform.offset}
-                  onPointerDown={handlePointerDown}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                  onWheel={handleWheel}
-                />
-              )}
-              {mode === 'diff' && (
-                <DiffView
-                  result={result}
-                  scale={transform.scale}
-                  offset={transform.offset}
-                  onPointerDown={handlePointerDown}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                  onWheel={handleWheel}
-                />
-              )}
+              {mode === 'side-by-side' && <SideBySideView result={result} {...viewProps} />}
+              {mode === 'overlay' && <OverlayView result={result} opacity={overlayOpacity} {...viewProps} />}
+              {mode === 'diff' && <DiffView result={result} {...viewProps} />}
             </>
           ) : (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c8ccd4' }}>
