@@ -9,7 +9,369 @@ interface AnalysisModalProps {
   onOpenChange: (isOpen: boolean) => void;
 }
 
+interface ImageViewerProps {
+  title: string;
+  src: string;
+  alt: string;
+  scale?: number;
+  offset?: { x: number; y: number };
+  onPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerMove?: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerUp?: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onWheel?: (e: React.WheelEvent<HTMLDivElement>) => void;
+}
+
+const ImageViewer = React.memo(function ImageViewer({
+  title,
+  src,
+  alt,
+  scale = 1,
+  offset = { x: 0, y: 0 },
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onWheel,
+}: ImageViewerProps) {
+  return (
+    <div style={{ display: 'flex', minHeight: 0, flexDirection: 'column', gap: '12px', flex: 1 }}>
+      <div style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.72)' }}>{title}</div>
+      <div
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onWheel={onWheel}
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden',
+          borderRadius: '12px',
+          background: '#16191f',
+          padding: '16px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: scale > 1 ? 'grab' : 'default',
+          touchAction: 'none',
+          userSelect: 'none',
+        }}
+      >
+        <div
+          style={{
+            transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+            transformOrigin: 'center',
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            pointerEvents: 'none',
+            willChange: 'transform',
+          }}
+        >
+          <img
+            src={src}
+            alt={alt}
+            loading="lazy"
+            style={{
+              display: 'block',
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              userSelect: 'none',
+              pointerEvents: 'none',
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+});
+
+interface SideBySideViewProps {
+  result: AnalysisResult;
+  scale: number;
+  offset: { x: number; y: number };
+  onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onWheel: (e: React.WheelEvent<HTMLDivElement>) => void;
+}
+
+const SideBySideView = React.memo(function SideBySideView({
+  result,
+  scale,
+  offset,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onWheel,
+}: SideBySideViewProps) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '24px',
+        flex: 1,
+        minHeight: 0,
+      }}
+    >
+      <ImageViewer
+        title="Figma"
+        src={result.figmaSrc}
+        alt="Figma overlay"
+        scale={scale}
+        offset={offset}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onWheel={onWheel}
+      />
+      <ImageViewer
+        title="Screenshot"
+        src={result.screenshotSrc}
+        alt="Storybook screenshot"
+        scale={scale}
+        offset={offset}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onWheel={onWheel}
+      />
+    </div>
+  );
+});
+
+interface OverlayViewProps {
+  result: AnalysisResult;
+  opacity: number;
+  scale: number;
+  offset: { x: number; y: number };
+  onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onWheel: (e: React.WheelEvent<HTMLDivElement>) => void;
+}
+
+const OverlayView = React.memo(function OverlayView({
+  result,
+  opacity,
+  scale,
+  offset,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onWheel,
+}: OverlayViewProps) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flex: 1,
+        minHeight: 0,
+      }}
+    >
+      <div
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onWheel={onWheel}
+        style={{
+          flex: 1,
+          width: '100%',
+          minHeight: 0,
+          overflow: 'hidden',
+          borderRadius: '12px',
+          background: '#16191f',
+          padding: '16px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: scale > 1 ? 'grab' : 'default',
+          touchAction: 'none',
+          userSelect: 'none',
+        }}
+      >
+        <div
+          style={{
+            position: 'relative',
+            maxWidth: '100%',
+            maxHeight: '100%',
+            transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+            transformOrigin: 'center',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            pointerEvents: 'none',
+            willChange: 'transform',
+          }}
+        >
+          <img
+            src={result.screenshotSrc}
+            alt="Storybook screenshot base"
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+          <img
+            src={result.figmaSrc}
+            alt="Figma overlay layer"
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              opacity: opacity,
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+});
+
+interface DiffViewProps {
+  result: AnalysisResult;
+  scale: number;
+  offset: { x: number; y: number };
+  onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onWheel: (e: React.WheelEvent<HTMLDivElement>) => void;
+}
+
+const DiffView = React.memo(function DiffView({
+  result,
+  scale,
+  offset,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onWheel,
+}: DiffViewProps) {
+  return (
+    <div style={{ display: 'flex', minHeight: 0, flexDirection: 'column', gap: '12px', flex: 1 }}>
+      <ImageViewer
+        title="Diff"
+        src={result.diffSrc}
+        alt="Pixel diff"
+        scale={scale}
+        offset={offset}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onWheel={onWheel}
+      />
+    </div>
+  );
+});
+
 export function AnalysisModal({ isOpen, result, onOpenChange }: AnalysisModalProps) {
+  const [mode, setMode] = React.useState<'side-by-side' | 'overlay' | 'diff'>('side-by-side');
+  const [overlayOpacity, setOverlayOpacity] = React.useState<number>(0.5);
+
+  const [transform, setTransform] = React.useReducer(
+    (
+      state: { scale: number; offset: { x: number; y: number } },
+      action:
+        | { type: 'SET_SCALE'; payload: number }
+        | { type: 'SET_OFFSET'; payload: { x: number; y: number } }
+        | { type: 'RESET' },
+    ) => {
+      switch (action.type) {
+        case 'SET_SCALE':
+          return { ...state, scale: Math.min(Math.max(action.payload, 0.5), 10) };
+        case 'SET_OFFSET':
+          return { ...state, offset: action.payload };
+        case 'RESET':
+          return { scale: 1, offset: { x: 0, y: 0 } };
+        default:
+          return state;
+      }
+    },
+    { scale: 1, offset: { x: 0, y: 0 } },
+  );
+
+  const [isDragging, setIsDragging] = React.useState(false);
+  const dragStartRef = React.useRef({ x: 0, y: 0 });
+  const offsetRef = React.useRef(transform.offset);
+  const animationFrameRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    offsetRef.current = transform.offset;
+  }, [transform.offset]);
+
+  React.useEffect(() => {
+    setTransform({ type: 'RESET' });
+  }, [mode]);
+
+  const handlePointerDown = React.useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.clientX - offsetRef.current.x,
+      y: e.clientY - offsetRef.current.y,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, []);
+
+  const handlePointerMove = React.useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isDragging) return;
+      if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
+
+      const clientX = e.clientX;
+      const clientY = e.clientY;
+
+      animationFrameRef.current = requestAnimationFrame(() => {
+        setTransform({
+          type: 'SET_OFFSET',
+          payload: {
+            x: clientX - dragStartRef.current.x,
+            y: clientY - dragStartRef.current.y,
+          },
+        });
+      });
+    },
+    [isDragging],
+  );
+
+  const handlePointerUp = React.useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    setIsDragging(false);
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // Ignored
+    }
+  }, []);
+
+  const handleWheel = React.useCallback(
+    (e: React.WheelEvent<HTMLDivElement>) => {
+      const zoomFactor = 1.1;
+      const delta = e.deltaY < 0 ? zoomFactor : 1 / zoomFactor;
+      setTransform({
+        type: 'SET_SCALE',
+        payload: transform.scale * delta,
+      });
+    },
+    [transform.scale],
+  );
+
+  React.useEffect(() => {
+    return () => {
+      if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
+    };
+  }, []);
+
   return (
     <Modal open={isOpen} onOpenChange={onOpenChange} ariaLabel="Figma analysis result" width="100vw" height="100vh">
       <div
@@ -42,59 +404,151 @@ export function AnalysisModal({ isOpen, result, onOpenChange }: AnalysisModalPro
             </Button>
           </div>
         </div>
+
+        {result && (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 32px',
+              background: '#16191f',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Button
+                type="button"
+                variant={mode === 'side-by-side' ? 'solid' : 'outline'}
+                onClick={() => setMode('side-by-side')}
+                ariaLabel={false}
+                style={mode === 'side-by-side' ? { backgroundColor: '#006dea', color: '#ffffff' } : {}}
+              >
+                Side by Side
+              </Button>
+              <Button
+                type="button"
+                variant={mode === 'overlay' ? 'solid' : 'outline'}
+                onClick={() => setMode('overlay')}
+                ariaLabel={false}
+                style={mode === 'overlay' ? { backgroundColor: '#006dea', color: '#ffffff' } : {}}
+              >
+                Overlay
+              </Button>
+              <Button
+                type="button"
+                variant={mode === 'diff' ? 'solid' : 'outline'}
+                onClick={() => setMode('diff')}
+                ariaLabel={false}
+                style={mode === 'diff' ? { backgroundColor: '#006dea', color: '#ffffff' } : {}}
+              >
+                Diff Only
+              </Button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {mode === 'overlay' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap' }}>
+                    Opacity:
+                  </span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={Math.round(overlayOpacity * 100)}
+                    onChange={(e) => setOverlayOpacity(Number(e.target.value) / 100)}
+                    style={{ width: '120px' }}
+                  />
+                  <span style={{ fontSize: '12px', width: '36px', color: 'rgba(255,255,255,0.8)' }}>
+                    {Math.round(overlayOpacity * 100)}%
+                  </span>
+                </div>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setTransform({ type: 'SET_SCALE', payload: transform.scale / 1.2 })}
+                ariaLabel={false}
+                style={{ minWidth: '36px', padding: '0 8px' }}
+              >
+                -
+              </Button>
+              <span style={{ fontSize: '13px', width: '48px', textAlign: 'center', color: 'rgba(255,255,255,0.8)' }}>
+                {Math.round(transform.scale * 100)}%
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setTransform({ type: 'SET_SCALE', payload: transform.scale * 1.2 })}
+                ariaLabel={false}
+                style={{ minWidth: '36px', padding: '0 8px' }}
+              >
+                +
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setTransform({ type: 'RESET' });
+                }}
+                ariaLabel={false}
+                style={{ fontSize: '12px' }}
+              >
+                Reset
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '24px',
+            display: 'flex',
             flex: 1,
             minHeight: 0,
+            flexDirection: 'column',
             padding: '24px 32px 32px',
           }}
         >
           {result ? (
             <>
-              <div style={{ display: 'flex', minHeight: 0, flexDirection: 'column', gap: '12px' }}>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.72)' }}>Figma</div>
-                <div
-                  style={{
-                    flex: 1,
-                    minHeight: 0,
-                    overflow: 'auto',
-                    borderRadius: '12px',
-                    background: '#16191f',
-                    padding: '16px',
-                  }}
-                >
-                  <img
-                    src={result.figmaSrc}
-                    alt="Figma overlay"
-                    style={{ display: 'block', width: '100%', height: 'auto', objectFit: 'contain' }}
-                  />
-                </div>
-              </div>
-              <div style={{ display: 'flex', minHeight: 0, flexDirection: 'column', gap: '12px' }}>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.72)' }}>Screenshot</div>
-                <div
-                  style={{
-                    flex: 1,
-                    minHeight: 0,
-                    overflow: 'auto',
-                    borderRadius: '12px',
-                    background: '#16191f',
-                    padding: '16px',
-                  }}
-                >
-                  <img
-                    src={result.screenshotSrc}
-                    alt="Storybook screenshot"
-                    style={{ display: 'block', width: '100%', height: 'auto', objectFit: 'contain' }}
-                  />
-                </div>
-              </div>
+              {mode === 'side-by-side' && (
+                <SideBySideView
+                  result={result}
+                  scale={transform.scale}
+                  offset={transform.offset}
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onWheel={handleWheel}
+                />
+              )}
+              {mode === 'overlay' && (
+                <OverlayView
+                  result={result}
+                  opacity={overlayOpacity}
+                  scale={transform.scale}
+                  offset={transform.offset}
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onWheel={handleWheel}
+                />
+              )}
+              {mode === 'diff' && (
+                <DiffView
+                  result={result}
+                  scale={transform.scale}
+                  offset={transform.offset}
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onWheel={handleWheel}
+                />
+              )}
             </>
           ) : (
-            <div style={{ gridColumn: '1 / -1', alignSelf: 'center', justifySelf: 'center', color: '#c8ccd4' }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c8ccd4' }}>
               Hasil analisis belum tersedia.
             </div>
           )}

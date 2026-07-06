@@ -51,6 +51,7 @@ export interface FigmaSyncErrorPayload {
 export interface AnalysisResult {
   figmaSrc: string;
   screenshotSrc: string;
+  diffSrc: string;
   similarity: number;
 }
 
@@ -87,6 +88,18 @@ export function getStoryOverlayAssetPath(storyId: string) {
 
 export function getVersionedStoryOverlayAssetPath(storyId: string, version: number) {
   return `${getStoryOverlayAssetPath(storyId)}?t=${version}`;
+}
+
+export function getStoryDiffFilename(storyId: string) {
+  return `diff-${storyId.replace(/[^a-zA-Z0-9-_]/g, '-')}.png`;
+}
+
+export function getStoryDiffAssetPath(storyId: string) {
+  return `${FIGMA_STATIC_ASSET_BASE}/${getStoryDiffFilename(storyId)}`;
+}
+
+export function getVersionedStoryDiffAssetPath(storyId: string, version: number) {
+  return `${getStoryDiffAssetPath(storyId)}?t=${version}`;
 }
 
 export function getScreenshotFilename() {

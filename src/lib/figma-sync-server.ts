@@ -8,8 +8,10 @@ import { PNG } from 'pngjs';
 import type { AnalysisResult } from '../constants';
 import {
   getScreenshotFilename,
+  getStoryDiffFilename,
   getStoryOverlayFilename,
   getVersionedScreenshotAssetPath,
+  getVersionedStoryDiffAssetPath,
   getVersionedStoryOverlayAssetPath,
 } from '../constants';
 
@@ -31,6 +33,10 @@ export function ensureStaticDir() {
 
 export function getOverlayFilePath(storyId: string) {
   return path.join(FIGMA_STATIC_DIR, getStoryOverlayFilename(storyId));
+}
+
+export function getDiffFilePath(storyId: string) {
+  return path.join(FIGMA_STATIC_DIR, getStoryDiffFilename(storyId));
 }
 
 export function getScreenshotFilePath() {
@@ -125,21 +131,24 @@ function assertFileExists(filePath: string, message: string) {
   }
 }
 
-function calculateImageSimilarity(overlayImage: PNG, screenshotImage: PNG) {
+function calculateImageSimilarity(overlayImage: PNG, screenshotImage: PNG, diffPath: string) {
   if (overlayImage.width !== screenshotImage.width || overlayImage.height !== screenshotImage.height) {
     throw new Error(
       `Image dimensions do not match: ${overlayImage.width}x${overlayImage.height} vs ${screenshotImage.width}x${screenshotImage.height}`,
     );
   }
 
+  const diffImage = new PNG({ width: overlayImage.width, height: overlayImage.height });
   const diffPixels = pixelmatch(
     overlayImage.data,
     screenshotImage.data,
-    null,
+    diffImage.data,
     overlayImage.width,
     overlayImage.height,
     { threshold: 0.1 },
   );
+
+  fs.writeFileSync(diffPath, PNG.sync.write(diffImage));
   const totalPixels = overlayImage.width * overlayImage.height;
 
   return Number((((totalPixels - diffPixels) / totalPixels) * 100).toFixed(2));
@@ -151,6 +160,7 @@ function createAnalysisResult(storyId: string, similarity: number): AnalysisResu
   return {
     figmaSrc: getVersionedStoryOverlayAssetPath(storyId, version),
     screenshotSrc: getVersionedScreenshotAssetPath(version),
+    diffSrc: getVersionedStoryDiffAssetPath(storyId, version),
     similarity,
   };
 }
@@ -180,13 +190,14 @@ export async function downloadOverlayFromFigma(figmaUrl: string, storyId: string
 export function analyzeSavedImages(storyId: string): AnalysisResult {
   const overlayPath = getOverlayFilePath(storyId);
   const screenshotPath = getScreenshotFilePath();
+  const diffPath = getDiffFilePath(storyId);
 
   assertFileExists(overlayPath, `Overlay PNG not found for story ${storyId}`);
   assertFileExists(screenshotPath, 'Screenshot PNG not found');
 
   const overlayImage = readPngFromFile(overlayPath);
   const screenshotImage = readPngFromFile(screenshotPath);
-  const similarity = calculateImageSimilarity(overlayImage, screenshotImage);
+  const similarity = calculateImageSimilarity(overlayImage, screenshotImage, diffPath);
 
   return createAnalysisResult(storyId, similarity);
 }
