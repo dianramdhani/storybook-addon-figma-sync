@@ -14,13 +14,16 @@ import {
   CHANNEL_SAVE_SCREENSHOT,
   DEFAULT_FIGMA_URL,
   DEFAULT_OVERLAY_OPACITY,
+  DEFAULT_OVERLAY_VERSION,
   DEFAULT_OVERLAY_VISIBLE,
   FIGMA_URL_KEY,
   type FigmaSyncErrorPayload,
   getOverlayOpacityGlobal,
+  getOverlayVersionGlobal,
   getOverlayVisibleGlobal,
-  getStoryOverlayAssetPath,
+  getVersionedStoryOverlayAssetPath,
   OVERLAY_OPACITY_KEY,
+  OVERLAY_VERSION_KEY,
   OVERLAY_VISIBLE_KEY,
   type RequestScreenshotPayload,
 } from './constants';
@@ -69,9 +72,10 @@ channel.on(CHANNEL_REQUEST_SCREENSHOT, async (payload?: RequestScreenshotPayload
 });
 
 const withOverlay = (StoryFn: StoryFunction<Renderer>, context: StoryContext<Renderer>) => {
-  const overlaySrc = getStoryOverlayAssetPath(context.id);
   const isVisible = getOverlayVisibleGlobal(context.globals);
   const overlayOpacity = getOverlayOpacityGlobal(context.globals);
+  const overlayVersion = getOverlayVersionGlobal(context.globals);
+  const overlaySrc = getVersionedStoryOverlayAssetPath(context.id, overlayVersion);
 
   if (!overlaySrc || !isVisible) return StoryFn();
 
@@ -112,11 +116,17 @@ const preview: ProjectAnnotations<Renderer> = {
       description: 'Opacity of the overlay image',
       defaultValue: DEFAULT_OVERLAY_OPACITY,
     },
+    [OVERLAY_VERSION_KEY]: {
+      name: 'Overlay version',
+      description: 'Timestamp to bust the cache of overlay image',
+      defaultValue: DEFAULT_OVERLAY_VERSION,
+    },
   },
   initialGlobals: {
     [FIGMA_URL_KEY]: DEFAULT_FIGMA_URL,
     [OVERLAY_VISIBLE_KEY]: DEFAULT_OVERLAY_VISIBLE,
     [OVERLAY_OPACITY_KEY]: DEFAULT_OVERLAY_OPACITY,
+    [OVERLAY_VERSION_KEY]: DEFAULT_OVERLAY_VERSION,
     ...urlGlobals,
   },
   decorators: [withOverlay],
