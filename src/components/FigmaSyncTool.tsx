@@ -315,10 +315,10 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
         setAnalysisState('idle');
         setAnalysisMessage('');
         setAnalysisResult(null);
-        emit(CHANNEL_DELETE_SCREENSHOT);
+        emit(CHANNEL_DELETE_SCREENSHOT, { storyId });
       }
     },
-    [emit],
+    [emit, storyId],
   );
 
   const handleLocalUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

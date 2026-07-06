@@ -27,12 +27,14 @@ export type ScreenshotPurpose = 'capture' | 'analyze';
 export interface RequestScreenshotPayload {
   purpose?: ScreenshotPurpose;
   storyId?: string | null;
+  requestId?: string;
 }
 
 export interface SaveScreenshotPayload {
   image: string;
   purpose?: ScreenshotPurpose;
   storyId?: string | null;
+  requestId?: string;
 }
 
 export interface FetchOverlayPayload {
@@ -46,6 +48,7 @@ export interface OverlayReadyPayload {
 
 export interface FigmaSyncErrorPayload {
   message: string;
+  requestId?: string;
 }
 
 export interface AnalysisResult {
@@ -102,14 +105,14 @@ export function getVersionedStoryDiffAssetPath(storyId: string, version: number)
   return `${getStoryDiffAssetPath(storyId)}?t=${version}`;
 }
 
-export function getScreenshotFilename() {
-  return 'ss.png';
+export function getScreenshotFilename(storyId: string) {
+  return `ss-${storyId.replace(/[^a-zA-Z0-9-_]/g, '-')}.png`;
 }
 
-export function getScreenshotAssetPath() {
-  return `${FIGMA_STATIC_ASSET_BASE}/${getScreenshotFilename()}`;
+export function getScreenshotAssetPath(storyId: string) {
+  return `${FIGMA_STATIC_ASSET_BASE}/${getScreenshotFilename(storyId)}`;
 }
 
-export function getVersionedScreenshotAssetPath(version: number) {
-  return `${getScreenshotAssetPath()}?t=${version}`;
+export function getVersionedScreenshotAssetPath(storyId: string, version: number) {
+  return `${getScreenshotAssetPath(storyId)}?t=${version}`;
 }

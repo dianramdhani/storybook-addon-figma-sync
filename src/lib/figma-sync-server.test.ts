@@ -34,7 +34,7 @@ function createDataUrl(buffer: Buffer) {
 
 function cleanupFiles() {
   const overlayPath = getOverlayFilePath(STORY_ID);
-  const screenshotPath = getScreenshotFilePath();
+  const screenshotPath = getScreenshotFilePath(STORY_ID);
 
   if (fs.existsSync(overlayPath)) fs.unlinkSync(overlayPath);
   if (fs.existsSync(screenshotPath)) fs.unlinkSync(screenshotPath);
@@ -56,13 +56,13 @@ describe('figma sync server helpers', () => {
   it('writes and deletes screenshot files', () => {
     const screenshot = createPngBuffer(1, 1, [255, 255, 255, 255]);
 
-    writeScreenshotFile(createDataUrl(screenshot));
+    writeScreenshotFile(STORY_ID, createDataUrl(screenshot));
 
-    expect(fs.existsSync(getScreenshotFilePath())).toBe(true);
+    expect(fs.existsSync(getScreenshotFilePath(STORY_ID))).toBe(true);
 
-    deleteScreenshotFile();
+    deleteScreenshotFile(STORY_ID);
 
-    expect(fs.existsSync(getScreenshotFilePath())).toBe(false);
+    expect(fs.existsSync(getScreenshotFilePath(STORY_ID))).toBe(false);
   });
 
   it('returns 100 similarity for identical images', () => {
@@ -70,13 +70,13 @@ describe('figma sync server helpers', () => {
 
     fs.mkdirSync(path.dirname(getOverlayFilePath(STORY_ID)), { recursive: true });
     fs.writeFileSync(getOverlayFilePath(STORY_ID), image);
-    writeScreenshotFile(createDataUrl(image));
+    writeScreenshotFile(STORY_ID, createDataUrl(image));
 
     const result = analyzeSavedImages(STORY_ID);
 
     expect(result.similarity).toBe(100);
     expect(result.figmaSrc).toContain(`figma-${STORY_ID}.png?t=`);
-    expect(result.screenshotSrc).toContain('ss.png?t=');
+    expect(result.screenshotSrc).toContain(`ss-${STORY_ID}.png?t=`);
   });
 
   it('throws when image dimensions do not match', () => {
@@ -85,7 +85,7 @@ describe('figma sync server helpers', () => {
 
     fs.mkdirSync(path.dirname(getOverlayFilePath(STORY_ID)), { recursive: true });
     fs.writeFileSync(getOverlayFilePath(STORY_ID), overlay);
-    writeScreenshotFile(createDataUrl(screenshot));
+    writeScreenshotFile(STORY_ID, createDataUrl(screenshot));
 
     expect(() => analyzeSavedImages(STORY_ID)).toThrow(/Image dimensions do not match/);
   });

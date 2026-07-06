@@ -51,5 +51,6 @@ export function createScreenshotPayload(dataUrl: string, payload?: RequestScreen
     image: dataUrl,
     purpose: payload?.purpose ?? 'capture',
     storyId: payload?.storyId ?? null,
+    requestId: payload?.requestId,
   };
 }
