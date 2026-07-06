@@ -45,6 +45,19 @@ channel.on(CHANNEL_REQUEST_SCREENSHOT, async (payload?: RequestScreenshotPayload
   try {
     const overlayDimensions = await getOverlayDimensions(payload?.storyId);
     const { width, height } = getCaptureDimensions(overlayDimensions);
+
+    // Save and reset scroll positions to prevent shifts in html-to-image
+    const scrollX = window.scrollX || document.documentElement.scrollLeft || document.body.scrollLeft;
+    const scrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop;
+
+    if (window.scrollTo) {
+      window.scrollTo(0, 0);
+    }
+    document.documentElement.scrollLeft = 0;
+    document.documentElement.scrollTop = 0;
+    document.body.scrollLeft = 0;
+    document.body.scrollTop = 0;
+
     const dataUrl = await toPng(element, {
       width,
       height,
@@ -52,12 +65,27 @@ channel.on(CHANNEL_REQUEST_SCREENSHOT, async (payload?: RequestScreenshotPayload
       canvasHeight: height,
       pixelRatio: 1,
       skipAutoScale: true,
+      style: {
+        transform: 'none',
+        margin: '0',
+        padding: '0',
+      },
       filter: (node) => {
         if (node instanceof HTMLElement && node.getAttribute('data-figma-sync-ignore') === 'true') return false;
         return true;
       },
       cacheBust: true,
     });
+
+    // Restore scroll positions
+    if (window.scrollTo) {
+      window.scrollTo(scrollX, scrollY);
+    } else {
+      document.documentElement.scrollLeft = scrollX;
+      document.documentElement.scrollTop = scrollY;
+      document.body.scrollLeft = scrollX;
+      document.body.scrollTop = scrollY;
+    }
     const screenshotPayload = createScreenshotPayload(dataUrl, payload);
     channel.emit(CHANNEL_SAVE_SCREENSHOT, screenshotPayload);
   } catch (error) {
