@@ -39,17 +39,17 @@ export function getDiffFilePath(storyId: string) {
   return path.join(FIGMA_STATIC_DIR, getStoryDiffFilename(storyId));
 }
 
-export function getScreenshotFilePath() {
-  return path.join(FIGMA_STATIC_DIR, getScreenshotFilename());
+export function getScreenshotFilePath(storyId: string) {
+  return path.join(FIGMA_STATIC_DIR, getScreenshotFilename(storyId));
 }
 
 export function decodePngDataUrl(image: string) {
   return Buffer.from(image.replace(/^data:image\/png;base64,/, ''), 'base64');
 }
 
-export function writeScreenshotFile(image: string) {
+export function writeScreenshotFile(storyId: string, image: string) {
   ensureStaticDir();
-  fs.writeFileSync(getScreenshotFilePath(), decodePngDataUrl(image));
+  fs.writeFileSync(getScreenshotFilePath(storyId), decodePngDataUrl(image));
 }
 
 function resolveEnvPath(envLocation = DEFAULT_ENV_LOCATION) {
@@ -159,7 +159,7 @@ function createAnalysisResult(storyId: string, similarity: number): AnalysisResu
 
   return {
     figmaSrc: getVersionedStoryOverlayAssetPath(storyId, version),
-    screenshotSrc: getVersionedScreenshotAssetPath(version),
+    screenshotSrc: getVersionedScreenshotAssetPath(storyId, version),
     diffSrc: getVersionedStoryDiffAssetPath(storyId, version),
     similarity,
   };
@@ -189,7 +189,7 @@ export async function downloadOverlayFromFigma(figmaUrl: string, storyId: string
 
 export function analyzeSavedImages(storyId: string): AnalysisResult {
   const overlayPath = getOverlayFilePath(storyId);
-  const screenshotPath = getScreenshotFilePath();
+  const screenshotPath = getScreenshotFilePath(storyId);
   const diffPath = getDiffFilePath(storyId);
 
   assertFileExists(overlayPath, `Overlay PNG not found for story ${storyId}`);
@@ -202,8 +202,8 @@ export function analyzeSavedImages(storyId: string): AnalysisResult {
   return createAnalysisResult(storyId, similarity);
 }
 
-export function deleteScreenshotFile() {
-  const screenshotPath = getScreenshotFilePath();
+export function deleteScreenshotFile(storyId: string) {
+  const screenshotPath = getScreenshotFilePath(storyId);
   if (fs.existsSync(screenshotPath)) {
     fs.unlinkSync(screenshotPath);
   }

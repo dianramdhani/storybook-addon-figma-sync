@@ -62,9 +62,10 @@ channel.on(CHANNEL_REQUEST_SCREENSHOT, async (payload?: RequestScreenshotPayload
     channel.emit(CHANNEL_SAVE_SCREENSHOT, screenshotPayload);
   } catch (error) {
     console.error('[Figma Sync] Failed to take screenshot:', error);
-    if (payload?.purpose === 'analyze') {
+    if (payload?.purpose === 'analyze' || payload?.requestId) {
       const errorPayload: FigmaSyncErrorPayload = {
         message: error instanceof Error ? error.message : 'Failed to capture screenshot for analysis',
+        requestId: payload?.requestId,
       };
       channel.emit(CHANNEL_ANALYSIS_ERROR, errorPayload);
     }
