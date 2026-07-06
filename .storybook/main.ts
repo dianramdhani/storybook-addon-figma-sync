@@ -1,6 +1,16 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { defineMain } from '@storybook/react-vite/node';
 import tailwindcss from '@tailwindcss/vite';
 import { mergeConfig } from 'vite';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const figmaSyncDir = path.join(__dirname, '.storybook-addon-sync-figma');
+if (!fs.existsSync(figmaSyncDir)) {
+  fs.mkdirSync(figmaSyncDir, { recursive: true });
+}
 
 const config = defineMain({
   stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|ts|tsx)'],

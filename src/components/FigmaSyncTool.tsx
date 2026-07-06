@@ -19,6 +19,7 @@ import {
   getOverlayVisibleGlobal,
   getVersionedStoryOverlayAssetPath,
   OVERLAY_OPACITY_KEY,
+  OVERLAY_VERSION_KEY,
   OVERLAY_VISIBLE_KEY,
   type OverlayReadyPayload,
   type RequestScreenshotPayload,
@@ -70,12 +71,14 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
       setIsAnalysisModalOpen(false);
     },
     [CHANNEL_OVERLAY_READY]: (payload: OverlayReadyPayload) => {
+      const version = Date.now();
       setFetchState('success');
       setFetchMessage('Overlay downloaded');
-      setOverlayVersion(Date.now());
+      setOverlayVersion(version);
       updateGlobals({
         [FIGMA_URL_KEY]: payload.figmaUrl,
         [OVERLAY_VISIBLE_KEY]: true,
+        [OVERLAY_VERSION_KEY]: version,
       });
       api.setQueryParams({ [URL_PARAM_OVERLAY_VISIBLE]: '1' });
       setIsTooltipVisible(false);
@@ -159,7 +162,6 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
     <>
       <PopoverProvider
         placement="bottom"
-        closeOnOutsideClick
         visible={isTooltipVisible}
         onVisibleChange={setIsTooltipVisible}
         aria-label="Figma Sync settings popover"
@@ -170,19 +172,25 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
               display: 'flex',
               flexDirection: 'column',
               gap: '12px',
-              minWidth: '360px',
+              width: '360px',
             }}
           >
             <Field label="Figma URL">
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                 <Form.Input
                   id="figma-url-input"
                   type="text"
                   placeholder="https://www.figma.com/file/..."
                   value={localFigmaUrl}
                   onChange={(e) => setLocalFigmaUrl(e.target.value)}
+                  style={{ flex: 1 }}
                 />
-                <Button type="button" onClick={handleSubmit} style={{ height: '100%' }} ariaLabel={false}>
+                <Button
+                  type="button"
+                  onClick={handleSubmit}
+                  ariaLabel={false}
+                  style={{ height: '100%', backgroundColor: '#006dea', color: '#ffffff' }}
+                >
                   Submit
                 </Button>
               </div>
@@ -230,10 +238,7 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
               variant="outline"
               onClick={handleAnalyze}
               disabled={!overlayAvailable || analysisState === 'loading'}
-              style={{
-                justifyContent: 'center',
-                width: '100%',
-              }}
+              style={{ width: '100%', backgroundColor: '#006dea', color: '#ffffff' }}
             >
               {analysisState === 'loading' ? 'Menganalisis...' : 'Analisis'}
             </Button>
