@@ -195,7 +195,7 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
                 </Button>
               </div>
             </Field>
-            {overlayAvailable ? (
+            {overlayAvailable && (
               <Field label={`Overlay: ${showOverlay ? ` ${overlayOpacity}%` : ' Off'}`}>
                 <input type="checkbox" checked={showOverlay} onChange={handleVisibleChange} />
                 <input
@@ -209,8 +209,8 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
                   style={{ flex: 1, width: '100%' }}
                 />
               </Field>
-            ) : null}
-            {fetchMessage ? (
+            )}
+            {fetchMessage && (
               <div
                 style={{
                   fontSize: '12px',
@@ -219,11 +219,11 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
               >
                 {fetchMessage}
               </div>
-            ) : null}
-            {!overlayAvailable && fetchState !== 'loading' ? (
+            )}
+            {!overlayAvailable && fetchState !== 'loading' && (
               <div style={{ fontSize: '12px', color: '#666' }}>Overlay PNG belum tersedia untuk story ini.</div>
-            ) : null}
-            {analysisMessage ? (
+            )}
+            {analysisMessage && (
               <div
                 style={{
                   fontSize: '12px',
@@ -232,7 +232,7 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
               >
                 {analysisMessage}
               </div>
-            ) : null}
+            )}
             <Button
               type="button"
               variant="outline"
