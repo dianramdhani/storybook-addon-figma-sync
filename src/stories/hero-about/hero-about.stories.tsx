@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
-import { Benefits } from '.';
+import { HeroAbout } from '.';
 
 const meta = {
-  title: 'Sentri/Benefits',
-  component: Benefits,
+  title: 'Sentri/HeroAbout',
+  component: HeroAbout,
   parameters: {
     layout: 'fullscreen',
   },
-} satisfies Meta<typeof Benefits>;
+} satisfies Meta<typeof HeroAbout>;
 
 export default meta;
 

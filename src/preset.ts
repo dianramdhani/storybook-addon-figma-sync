@@ -77,7 +77,7 @@ interface ViteConfig {
 }
 
 interface WebpackDevServer {
-  app: {
+  app?: {
     get(path: string, handler: (req: ExpressRequest, res: ExpressResponse) => void | Promise<void>): void;
   };
   setupMiddlewares?: (middlewares: unknown, devServer: WebpackDevServer) => unknown;
@@ -364,7 +364,7 @@ export const webpackFinal = async (config: WebpackConfig) => {
   config.devServer = {
     ...originalDevServer,
     setupMiddlewares: (middlewares: unknown, devServer: WebpackDevServer) => {
-      devServer.app.get('/api/figma-sync/screenshot', async (req: ExpressRequest, res: ExpressResponse) => {
+      devServer.app?.get('/api/figma-sync/screenshot', async (req: ExpressRequest, res: ExpressResponse) => {
         if (!serverChannel) {
           return res.status(503).json({
             success: false,
