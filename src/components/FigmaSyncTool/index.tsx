@@ -1,6 +1,6 @@
 import { LinkIcon } from '@storybook/icons';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Form, PopoverProvider } from 'storybook/internal/components';
+import { Button, PopoverProvider } from 'storybook/internal/components';
 import { useChannel, useGlobals, useStorybookApi } from 'storybook/manager-api';
 
 import {
@@ -25,160 +25,10 @@ import {
   type RequestScreenshotPayload,
   URL_PARAM_OVERLAY_OPACITY,
   URL_PARAM_OVERLAY_VISIBLE,
-} from '../constants';
-import { AnalysisModal } from './AnalysisModal';
-import { useOverlayAvailability, useOverlayIframeSizing } from './useOverlayImage';
-
-const Field = memo(function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <label style={{ fontSize: '13px', fontWeight: 600 }}>{label}</label>
-      <div style={{ display: 'flex', gap: '8px' }}>{children}</div>
-    </div>
-  );
-});
-
-const PopoverContent = memo(function PopoverContent({
-  localFigmaUrl,
-  onLocalUrlChange,
-  onSubmit,
-  overlayAvailable,
-  showOverlay,
-  overlayOpacity,
-  onVisibleChange,
-  onOpacityChange,
-  fetchMessage,
-  fetchState,
-  analysisMessage,
-  analysisState,
-  onAnalyze,
-  isLoading,
-}: {
-  localFigmaUrl: string;
-  onLocalUrlChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSubmit: () => void;
-  overlayAvailable: boolean;
-  showOverlay: boolean;
-  overlayOpacity: number;
-  onVisibleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onOpacityChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  fetchMessage: string;
-  fetchState: 'idle' | 'loading' | 'success' | 'error';
-  analysisMessage: string;
-  analysisState: 'idle' | 'loading' | 'success' | 'error';
-  onAnalyze: () => void;
-  isLoading: boolean;
-}) {
-  const showFetchMessage = fetchMessage && fetchState !== 'success';
-  const showInfoMessage = !overlayAvailable && fetchState !== 'loading';
-
-  return (
-    <div
-      style={{
-        padding: '12px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        width: '360px',
-      }}
-    >
-      <style>{`
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover,
-        input:-webkit-autofill:focus,
-        input:-webkit-autofill:active {
-          -webkit-text-fill-color: #c9cccf !important;
-          -webkit-box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.1) inset !important;
-        }
-      `}</style>
-      <Field label="Figma URL">
-        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-          <Form.Input
-            id="figma-url-input"
-            type="text"
-            placeholder="https://www.figma.com/file/..."
-            value={localFigmaUrl}
-            onChange={onLocalUrlChange}
-            aria-label="Figma URL input"
-          />
-          <Button
-            type="button"
-            onClick={onSubmit}
-            ariaLabel="Submit Figma URL"
-            style={{ height: '100%', backgroundColor: '#006dea', color: '#ffffff' }}
-          >
-            Submit
-          </Button>
-        </div>
-      </Field>
-
-      {overlayAvailable && (
-        <Field label={`Overlay: ${showOverlay ? ` ${overlayOpacity}%` : ' Off'}`}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-            <input
-              type="checkbox"
-              checked={showOverlay}
-              onChange={onVisibleChange}
-              aria-label="Toggle overlay visibility"
-            />
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={overlayOpacity}
-              onChange={onOpacityChange}
-              disabled={!showOverlay}
-              style={{ flex: 1, width: '100%' }}
-              aria-label="Overlay opacity slider"
-            />
-          </div>
-        </Field>
-      )}
-
-      {showFetchMessage && (
-        <div
-          style={{
-            fontSize: '12px',
-            color: fetchState === 'error' ? '#d32f2f' : '#666',
-          }}
-          role="status"
-          aria-live="polite"
-        >
-          {fetchMessage}
-        </div>
-      )}
-
-      {showInfoMessage && (
-        <div style={{ fontSize: '12px', color: '#666' }}>Overlay PNG belum tersedia untuk story ini.</div>
-      )}
-
-      {analysisMessage && (
-        <div
-          style={{
-            fontSize: '12px',
-            color: analysisState === 'error' ? '#d32f2f' : '#666',
-          }}
-          role="status"
-          aria-live="polite"
-        >
-          {analysisMessage}
-        </div>
-      )}
-
-      <Button
-        type="button"
-        variant="outline"
-        onClick={onAnalyze}
-        disabled={!overlayAvailable || isLoading}
-        style={{ width: '100%', backgroundColor: '#006dea', color: '#ffffff' }}
-        ariaLabel="Analyze screenshot against Figma overlay"
-      >
-        {isLoading ? 'Please wait...' : 'Analyze Screenshot'}
-      </Button>
-    </div>
-  );
-});
+} from '../../constants';
+import { AnalysisModal } from '../AnalysisModal';
+import { useOverlayAvailability, useOverlayIframeSizing } from '../useOverlayImage';
+import { PopoverContent } from './PopoverContent';
 
 export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const [globals, updateGlobals] = useGlobals();
