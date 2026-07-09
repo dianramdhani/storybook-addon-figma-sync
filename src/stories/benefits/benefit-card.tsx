@@ -29,7 +29,7 @@ export function BenefitCard({ card, index }: BenefitCardProps) {
         'cursor-pointer hover:z-10',
         card.paddingClass,
         card.leftOffset,
-        isLastCard && 'col-span-2 lg:col-auto',
+        isLastCard && 'lg:col-auto',
       )}
     >
       <Card
