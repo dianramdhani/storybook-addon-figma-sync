@@ -4,17 +4,18 @@ import { STORYBOOK_PREVIEW_IFRAME_SELECTOR } from '../constants';
 import { loadImage } from '../lib/load-image';
 
 export function useOverlayAvailability(src: string) {
-  const [isAvailable, setIsAvailable] = useState(false);
+  const [status, setStatus] = useState<'loading' | 'available' | 'unavailable'>('loading');
 
   useEffect(() => {
     let isCancelled = false;
+    setStatus('loading');
 
     loadImage(src)
       .then(() => {
-        if (!isCancelled) setIsAvailable(true);
+        if (!isCancelled) setStatus('available');
       })
       .catch(() => {
-        if (!isCancelled) setIsAvailable(false);
+        if (!isCancelled) setStatus('unavailable');
       });
 
     return () => {
@@ -22,7 +23,7 @@ export function useOverlayAvailability(src: string) {
     };
   }, [src]);
 
-  return isAvailable;
+  return status;
 }
 
 export function useOverlayIframeSizing(src: string, isVisible: boolean) {
