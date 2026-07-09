@@ -19,6 +19,7 @@ A Storybook addon designed to sync Figma design frames directly into Storybook s
   - **Side-by-Side**: Compare the Figma design and live component screenshot side by side.
   - **Overlay (Interactive)**: A draggable and zoomable canvas layer where the Figma mockup is overlaid on the component screenshot.
   - **Diff Only**: A visual diff highlighting the pixel mismatch errors in red.
+- **Single JSON Registry (`registry.json`)**: Persists all sync metadata—such as Story ID, Figma URLs, asset paths, similarity scores, overlay visibility, and opacity percentages—in a single database file, isolating settings per story.
 - **Caching Mechanism**: Downloaded Figma design images are stored locally under `.storybook/.storybook-addon-sync-figma/` for fast loading and reduced API consumption.
 
 ---
@@ -64,7 +65,7 @@ sequenceDiagram
     Developer->>Manager: Click "Analyze Screenshot"
     Manager->>Preview: Emit CHANNEL_REQUEST_SCREENSHOT
     Preview->>Preview: Capture DOM screenshot via html-to-image
-    Preview->>NodeServer: Emit CHANNEL_SAVE_SCREENSHOT (base64 PNG)
+    Preview-->>NodeServer: Emit CHANNEL_SAVE_SCREENSHOT (base64 PNG)
     NodeServer->>NodeServer: Save screenshot & compare with Figma overlay (pixelmatch)
     NodeServer->>NodeServer: Generate Diff PNG
     NodeServer-->>Manager: Emit CHANNEL_ANALYSIS_READY (Similarity data & paths)
@@ -149,8 +150,17 @@ storybook-addon-figma-sync/
 ├── scripts/                        # Automation & prepublish scripts
 ├── src/                            # Source directory
 │   ├── components/                 # React UI Components
-│   │   ├── FigmaSyncTool.tsx       # Toolbar panel settings button & popover
-│   │   ├── AnalysisModal.tsx       # Side-by-side, overlay, and diff comparison panel
+│   │   ├── FigmaSyncTool/          # Toolbar panel settings button & popover
+│   │   │   ├── index.tsx
+│   │   │   ├── Field.tsx
+│   │   │   └── PopoverContent.tsx
+│   │   ├── AnalysisModal/          # Side-by-side, overlay, and diff comparison panel
+│   │   │   ├── index.tsx
+│   │   │   ├── ImageViewer.tsx
+│   │   │   ├── SideBySideView.tsx
+│   │   │   ├── OverlayView.tsx
+│   │   │   ├── DiffView.tsx
+│   │   │   └── TransformContext.tsx
 │   │   └── useOverlayImage.ts      # Hooks to verify image availability & resize preview iframe
 │   ├── lib/                        # Helper libraries
 │   │   ├── figma-sync-preview.ts   # URL parser and browser screenshot capturing configuration
