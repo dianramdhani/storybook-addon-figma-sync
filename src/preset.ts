@@ -11,9 +11,11 @@ import {
   CHANNEL_OVERLAY_READY,
   CHANNEL_REQUEST_SCREENSHOT,
   CHANNEL_SAVE_SCREENSHOT,
+  CHANNEL_SAVE_SETTINGS,
   type FetchOverlayPayload,
   type FigmaSyncErrorPayload,
   type SaveScreenshotPayload,
+  type SaveSettingsPayload,
 } from './constants';
 import {
   analyzeSavedImages,
@@ -23,6 +25,7 @@ import {
   getDiffFilePath,
   getOverlayFilePath,
   getScreenshotFilePath,
+  updateRegistryEntry,
   writeScreenshotFile,
 } from './lib/figma-sync-server';
 
@@ -133,6 +136,9 @@ export const experimental_serverChannel = (channel: Channel, options: FigmaSyncA
   channel.on(CHANNEL_FETCH_OVERLAY, async (data: FetchOverlayPayload) => {
     try {
       await downloadOverlayFromFigma(data.figmaUrl, data.storyId, options);
+      updateRegistryEntry(data.storyId, {
+        overlayVisible: true,
+      });
       channel.emit(CHANNEL_OVERLAY_READY, {
         figmaUrl: data.figmaUrl,
       });
@@ -152,6 +158,19 @@ export const experimental_serverChannel = (channel: Channel, options: FigmaSyncA
       }
     } catch (err) {
       console.error('[Figma Sync] Failed to delete screenshot:', err);
+    }
+  });
+
+  channel.on(CHANNEL_SAVE_SETTINGS, (data: SaveSettingsPayload) => {
+    try {
+      if (data.storyId) {
+        updateRegistryEntry(data.storyId, {
+          overlayVisible: data.overlayVisible,
+          overlayOpacity: data.overlayOpacity,
+        });
+      }
+    } catch (err) {
+      console.error('[Figma Sync] Failed to save settings:', err);
     }
   });
 

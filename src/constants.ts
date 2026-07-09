@@ -21,8 +21,15 @@ export const CHANNEL_OVERLAY_ERROR = `${ADDON_ID}/overlay-error`;
 export const CHANNEL_ANALYSIS_READY = `${ADDON_ID}/analysis-ready`;
 export const CHANNEL_ANALYSIS_ERROR = `${ADDON_ID}/analysis-error`;
 export const CHANNEL_DELETE_SCREENSHOT = `${ADDON_ID}/delete-screenshot`;
+export const CHANNEL_SAVE_SETTINGS = `${ADDON_ID}/save-settings`;
 
 export type ScreenshotPurpose = 'capture' | 'analyze';
+
+export interface SaveSettingsPayload {
+  storyId: string;
+  overlayVisible?: boolean;
+  overlayOpacity?: number;
+}
 
 export interface RequestScreenshotPayload {
   purpose?: ScreenshotPurpose;

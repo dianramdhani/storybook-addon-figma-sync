@@ -16,6 +16,7 @@ import {
 } from '../constants';
 
 const FIGMA_STATIC_DIR = path.join(process.cwd(), '.storybook', '.storybook-addon-sync-figma');
+const REGISTRY_FILE = path.join(FIGMA_STATIC_DIR, 'registry.json');
 const DEFAULT_ENV_LOCATION = '../.env';
 
 export interface FigmaSyncAddonOptions {
@@ -27,8 +28,66 @@ interface ParsedFigmaUrl {
   nodeId: string;
 }
 
+export interface RegistryEntry {
+  storyId: string;
+  figmaUrl?: string;
+  figmaPng?: string;
+  screenshotPng?: string;
+  diffPng?: string;
+  similarity?: number;
+  overlayVisible?: boolean;
+  overlayOpacity?: number;
+  updatedAt: string;
+}
+
+export type Registry = Record<string, RegistryEntry>;
+
 export function ensureStaticDir() {
   if (!fs.existsSync(FIGMA_STATIC_DIR)) fs.mkdirSync(FIGMA_STATIC_DIR, { recursive: true });
+}
+
+export function readRegistry(): Registry {
+  ensureStaticDir();
+  if (!fs.existsSync(REGISTRY_FILE)) {
+    return {};
+  }
+  try {
+    const content = fs.readFileSync(REGISTRY_FILE, 'utf-8');
+    return JSON.parse(content) as Registry;
+  } catch (err) {
+    console.error('[Figma Sync] Failed to read registry.json:', err);
+    return {};
+  }
+}
+
+export function writeRegistry(registry: Registry) {
+  ensureStaticDir();
+  try {
+    fs.writeFileSync(REGISTRY_FILE, JSON.stringify(registry, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('[Figma Sync] Failed to write registry.json:', err);
+  }
+}
+
+export function updateRegistryEntry(storyId: string, updates: Partial<Omit<RegistryEntry, 'storyId' | 'updatedAt'>>) {
+  const registry = readRegistry();
+  const existing = registry[storyId] || { storyId, updatedAt: '' };
+
+  const merged = {
+    ...existing,
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+
+  // Clean undefined keys
+  Object.keys(merged).forEach((key) => {
+    if (merged[key as keyof RegistryEntry] === undefined) {
+      delete merged[key as keyof RegistryEntry];
+    }
+  });
+
+  registry[storyId] = merged;
+  writeRegistry(registry);
 }
 
 export function getOverlayFilePath(storyId: string) {
@@ -49,7 +108,12 @@ export function decodePngDataUrl(image: string) {
 
 export function writeScreenshotFile(storyId: string, image: string) {
   ensureStaticDir();
+  const ssFilename = getScreenshotFilename(storyId);
   fs.writeFileSync(getScreenshotFilePath(storyId), decodePngDataUrl(image));
+
+  updateRegistryEntry(storyId, {
+    screenshotPng: `/figma-sync-assets/${ssFilename}`,
+  });
 }
 
 function resolveEnvPath(envLocation = DEFAULT_ENV_LOCATION) {
@@ -184,7 +248,13 @@ export async function downloadOverlayFromFigma(figmaUrl: string, storyId: string
   if (!imageUrl) throw new Error('Figma did not return an image for the requested node');
 
   ensureStaticDir();
+  const figmaPngFilename = getStoryOverlayFilename(storyId);
   await downloadFile(imageUrl, getOverlayFilePath(storyId));
+
+  updateRegistryEntry(storyId, {
+    figmaUrl,
+    figmaPng: `/figma-sync-assets/${figmaPngFilename}`,
+  });
 }
 
 export function analyzeSavedImages(storyId: string): AnalysisResult {
@@ -199,6 +269,17 @@ export function analyzeSavedImages(storyId: string): AnalysisResult {
   const screenshotImage = readPngFromFile(screenshotPath);
   const similarity = calculateImageSimilarity(overlayImage, screenshotImage, diffPath);
 
+  const figmaPngFilename = getStoryOverlayFilename(storyId);
+  const ssFilename = getScreenshotFilename(storyId);
+  const diffFilename = getStoryDiffFilename(storyId);
+
+  updateRegistryEntry(storyId, {
+    figmaPng: `/figma-sync-assets/${figmaPngFilename}`,
+    screenshotPng: `/figma-sync-assets/${ssFilename}`,
+    diffPng: `/figma-sync-assets/${diffFilename}`,
+    similarity,
+  });
+
   return createAnalysisResult(storyId, similarity);
 }
 
@@ -207,4 +288,14 @@ export function deleteScreenshotFile(storyId: string) {
   if (fs.existsSync(screenshotPath)) {
     fs.unlinkSync(screenshotPath);
   }
+  const diffPath = getDiffFilePath(storyId);
+  if (fs.existsSync(diffPath)) {
+    fs.unlinkSync(diffPath);
+  }
+
+  updateRegistryEntry(storyId, {
+    screenshotPng: undefined,
+    diffPng: undefined,
+    similarity: undefined,
+  });
 }

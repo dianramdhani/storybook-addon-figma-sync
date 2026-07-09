@@ -12,9 +12,10 @@ import {
   CHANNEL_OVERLAY_ERROR,
   CHANNEL_OVERLAY_READY,
   CHANNEL_REQUEST_SCREENSHOT,
+  CHANNEL_SAVE_SETTINGS,
+  DEFAULT_OVERLAY_OPACITY,
   FIGMA_URL_KEY,
   type FigmaSyncErrorPayload,
-  getFigmaUrlGlobal,
   getOverlayOpacityGlobal,
   getOverlayVisibleGlobal,
   getVersionedStoryOverlayAssetPath,
@@ -23,6 +24,7 @@ import {
   OVERLAY_VISIBLE_KEY,
   type OverlayReadyPayload,
   type RequestScreenshotPayload,
+  type SaveSettingsPayload,
   URL_PARAM_OVERLAY_OPACITY,
   URL_PARAM_OVERLAY_VISIBLE,
 } from '../../constants';
@@ -35,7 +37,6 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const api = useStorybookApi();
   const storyId = api.getCurrentStoryData()?.id ?? '';
 
-  const figmaUrl = getFigmaUrlGlobal(globals);
   const showOverlay = getOverlayVisibleGlobal(globals);
   const globalOverlayOpacity = getOverlayOpacityGlobal(globals);
   const overlayOpacityPercent = Math.round(globalOverlayOpacity * 100);
@@ -48,14 +49,15 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   const [analysisState, setAnalysisState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [analysisMessage, setAnalysisMessage] = useState('');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const [localFigmaUrl, setLocalFigmaUrl] = useState(figmaUrl);
+  const [localFigmaUrl, setLocalFigmaUrl] = useState('');
 
   // Internal state untuk opacity biar smooth
   const [localOpacity, setLocalOpacity] = useState(overlayOpacityPercent);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const overlayImageSrc = getVersionedStoryOverlayAssetPath(storyId, overlayVersion);
-  const overlayAvailable = useOverlayAvailability(overlayImageSrc);
+  const overlayStatus = useOverlayAvailability(overlayImageSrc);
+  const overlayAvailable = overlayStatus === 'available';
 
   const emit = useChannel({
     [CHANNEL_ANALYSIS_READY]: (payload: AnalysisResult) => {
@@ -90,8 +92,56 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   });
 
   useEffect(() => {
-    setLocalFigmaUrl(figmaUrl);
-  }, [figmaUrl]);
+    if (!storyId) return;
+
+    fetch('/figma-sync-assets/registry.json')
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error('Not found');
+      })
+      .then((registry) => {
+        const entry = registry[storyId];
+        if (entry && entry.figmaUrl) {
+          setLocalFigmaUrl(entry.figmaUrl);
+          const savedOpacity =
+            entry.overlayOpacity !== undefined ? Math.round(entry.overlayOpacity * 100) : DEFAULT_OVERLAY_OPACITY * 100;
+          const savedVisible = entry.overlayVisible ?? false;
+          setLocalOpacity(savedOpacity);
+          updateGlobals({
+            [FIGMA_URL_KEY]: entry.figmaUrl,
+            [OVERLAY_VISIBLE_KEY]: savedVisible,
+            [OVERLAY_OPACITY_KEY]: entry.overlayOpacity ?? DEFAULT_OVERLAY_OPACITY,
+          });
+          api.setQueryParams({
+            [URL_PARAM_OVERLAY_VISIBLE]: savedVisible ? '1' : null,
+            [URL_PARAM_OVERLAY_OPACITY]: savedVisible ? String(savedOpacity) : null,
+          });
+        } else {
+          setLocalFigmaUrl('');
+          updateGlobals({
+            [FIGMA_URL_KEY]: '',
+            [OVERLAY_VISIBLE_KEY]: false,
+            [OVERLAY_OPACITY_KEY]: DEFAULT_OVERLAY_OPACITY,
+          });
+          api.setQueryParams({
+            [URL_PARAM_OVERLAY_VISIBLE]: null,
+            [URL_PARAM_OVERLAY_OPACITY]: null,
+          });
+        }
+      })
+      .catch(() => {
+        setLocalFigmaUrl('');
+        updateGlobals({
+          [FIGMA_URL_KEY]: '',
+          [OVERLAY_VISIBLE_KEY]: false,
+          [OVERLAY_OPACITY_KEY]: DEFAULT_OVERLAY_OPACITY,
+        });
+        api.setQueryParams({
+          [URL_PARAM_OVERLAY_VISIBLE]: null,
+          [URL_PARAM_OVERLAY_OPACITY]: null,
+        });
+      });
+  }, [storyId, updateGlobals, api]);
 
   useEffect(() => {
     setLocalOpacity(overlayOpacityPercent);
@@ -102,10 +152,10 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   }, [storyId]);
 
   useEffect(() => {
-    if (overlayAvailable || !showOverlay) return;
+    if (overlayStatus !== 'unavailable' || !showOverlay) return;
     updateGlobals({ [OVERLAY_VISIBLE_KEY]: false });
     api.setQueryParams({ [URL_PARAM_OVERLAY_VISIBLE]: null });
-  }, [api, overlayAvailable, showOverlay, updateGlobals]);
+  }, [api, overlayStatus, showOverlay, updateGlobals]);
 
   useOverlayIframeSizing(overlayImageSrc, showOverlay);
 
@@ -124,8 +174,15 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
         [URL_PARAM_OVERLAY_VISIBLE]: checked ? '1' : null,
         [URL_PARAM_OVERLAY_OPACITY]: checked ? String(localOpacity) : null,
       });
+
+      const settingsPayload: SaveSettingsPayload = {
+        storyId,
+        overlayVisible: checked,
+        overlayOpacity: localOpacity / 100,
+      };
+      emit(CHANNEL_SAVE_SETTINGS, settingsPayload);
     },
-    [api, localOpacity, updateGlobals],
+    [api, emit, localOpacity, storyId, updateGlobals],
   );
 
   const handleOpacityChange = useCallback(
@@ -144,10 +201,18 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
         const opacityValue = value / 100;
         updateGlobals({ [OVERLAY_OPACITY_KEY]: opacityValue });
         api.setQueryParams({ [URL_PARAM_OVERLAY_OPACITY]: String(value) });
+
+        const settingsPayload: SaveSettingsPayload = {
+          storyId,
+          overlayVisible: showOverlay,
+          overlayOpacity: opacityValue,
+        };
+        emit(CHANNEL_SAVE_SETTINGS, settingsPayload);
+
         debounceTimerRef.current = null;
       }, 100); // Debounce 100ms
     },
-    [api, updateGlobals],
+    [api, emit, showOverlay, storyId, updateGlobals],
   );
 
   const handleAnalyze = useCallback(() => {
@@ -186,7 +251,7 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   }, [globals]);
 
   return (
-    <>
+    <React.Fragment key={storyId}>
       <PopoverProvider
         placement="bottom"
         visible={isTooltipVisible}
@@ -220,6 +285,6 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
         result={analysisResult}
         onOpenChange={handleAnalysisModalOpenChange}
       />
-    </>
+    </React.Fragment>
   );
 });
