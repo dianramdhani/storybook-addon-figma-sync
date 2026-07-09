@@ -63,7 +63,7 @@ export function Benefits() {
     <section
       id="benefits"
       data-story-root
-      className="section-container flex flex-col justify-start py-6 lg:overflow-hidden lg:py-16"
+      className="section-container flex flex-col justify-start py-10 md:py-16 lg:overflow-hidden lg:py-16"
     >
       <div className="flex w-full flex-col gap-10">
         <SectionHeading
@@ -73,7 +73,7 @@ export function Benefits() {
           title="Take Control of Every Device"
           description="Maintain operational consistency as your network continues to grow."
         />
-        <div className="relative grid h-auto w-full grid-cols-1 gap-4 lg:mx-auto lg:block lg:h-120 lg:w-7xl">
+        <div className="relative grid h-auto w-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:mx-auto lg:block lg:h-120 lg:w-7xl">
           {CARDS.map((card, i) => (
             <BenefitCard key={i} card={card} index={i} />
           ))}
