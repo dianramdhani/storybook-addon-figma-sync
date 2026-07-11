@@ -1,13 +1,13 @@
 ---
 name: slicing-it
-description: 'Melakukan iterasi layout komponen UI secara bertahap agar sesuai dengan spesifikasi desain Figma menggunakan API REST screenshot dev server, dibatasi maksimal 3 siklus validasi untuk memastikan progres menuju kesempurnaan pixel.'
+description: 'Melakukan iterasi layout komponen UI secara bertahap agar sesuai dengan spesifikasi desain Figma menggunakan API REST screenshot dev server untuk memastikan progres menuju kesempurnaan pixel.'
 license: MIT
 allowed-tools: Bash, FileSystem
 ---
 
 # Skill Slicing IT
 
-Skill ini memandu AI agent melalui alur kerja regresi visual iteratif untuk menyempurnakan komponen React, HTML, dan CSS yang telah di-slice agar cocok dengan desain Figma dengan tingkat kemiripan mendekati 100%.
+Skill ini memandu AI agent melalui alur kerja regresi visual iteratif untuk menyempurnakan komponen React, HTML, dan CSS yang telah di-slice agar cocok dengan desain Figma dengan tingkat kemiripan di atas 90%.
 
 ---
 
@@ -16,9 +16,24 @@ Skill ini memandu AI agent melalui alur kerja regresi visual iteratif untuk meny
 Sebagai AI agent, tugas Anda **murni hanya terbatas pada**:
 
 1. **Slicing**: Mengubah kode (HTML, React, CSS, atau Tailwind) di dalam folder komponen yang ditentukan untuk meningkatkan kecocokan desain.
-2. **Memanggil API**: Menjalankan perintah pemanggilan (hit) URL endpoint API perbandingan untuk mendapatkan skor kemiripan dan memperbarui file diff di local disk.
+2. **Memanggil API**: Menjalankan perintah pemanggilan (hit) URL endpoint API perbandingan untuk mendapatkan skor kemiripan.
 
-**DILARANG KERAS** menulis skrip screenshot sendiri, mengotomasi browser menggunakan Playwright/Puppeteer, atau menjalankan browser headless. **Satu-satunya metode** bagi Anda untuk memvalidasi hasil slicing adalah dengan memanggil URL `/api/figma-sync/screenshot` dan memeriksa nilai skor kemiripan serta gambar diff yang dihasilkan di local disk.
+> [!IMPORTANT]
+> **ATURAN UTAMA & LARANGAN KERAS:**
+>
+> 1. **DILARANG KERAS** menulis skrip screenshot sendiri, mengotomasi browser menggunakan Playwright/Puppeteer, atau menjalankan browser headless.
+> 2. **DILARANG KERAS menggunakan tool `view_file` atau perintah bash untuk membaca/membuka file gambar** (seperti `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`) di dalam folder `.storybook/.storybook-addon-sync-figma/` atau folder lainnya. Membaca data gambar binary akan menghabiskan batas token context Anda secara drastis!
+> 3. **Fokus Anda adalah membandingkan kode menggunakan**:
+>    - **Sumber Desain**: Output teks terstruktur (Markdown) dari tool MCP `figma/get_figma_data`.
+>    - **Alat Pembanding**: Nilai persentase skor `similarity` yang dikembalikan dari API `/api/figma-sync/screenshot?storyId=<STORY_ID>`.
+> 4. Gambar perbedaan (diff image) hanya ditujukan untuk dilihat oleh pengguna manusia secara visual melalui browser mereka, bukan untuk dibaca oleh AI Agent.
+> 5. **GAYA KOMUNIKASI MINIMAL (Silent Mode)**: Jangan terlalu banyak bicara atau menjelaskan detail perubahan teknis ke pengguna. Cukup beri tahu pengguna nomor iterasi Anda saat ini (misal: "Iterasi 1...", "Iterasi 2...") dan nilai similarity score terbaru. Jangan mencetak output verbose/panjang di chat atau terminal.
+> 6. **DESAIN KODE MINIMALIS (YAGNI/Minimum Code)**: Tulis kode sesederhana dan seminim mungkin yang penting berfungsi (mencapai target kemiripan). Sebelum menulis kode, pastikan setiap baris atau blok kode benar-benar diperlukan. Gunakan native platform feature atau CSS/Tailwind bawaan tanpa membuat abstraksi baru yang rumit. Hindari dependensi tambahan dan boilerplate. Tandai penyederhanaan sengaja dengan komentar singkat di kode.
+> 7. **SISTEM DESAIN & UI KIT PROYEK (NO INLINE STYLES)**: Sebelum melakukan slicing pada komponen, baca berkas `package.json` dan `components.json` (jika ada) untuk mengidentifikasi UI kit yang dipakai proyek (misalnya **Shadcn UI** dengan path `@/stories/ui` atau `src/stories/ui`). **DILARANG KERAS menggunakan inline styles** (`style={{ ... }}`) untuk layouting, padding, margin, warna, atau font. Gunakan utility classes Tailwind CSS (v4/v3 sesuai konfigurasi) dan reuse komponen Shadcn UI yang sudah terpasang alih-alih merangkai elemen HTML dasar secara manual.
+> 8. **DILARANG KERAS MENULIS / MENJALANKAN SKRIP MANIPULASI GAMBAR**: Dilarang keras menulis atau mengeksekusi skrip pemrograman kustom (Python menggunakan PIL/Pillow, Node.js, zx, bash, OpenCV, dll.) untuk membandingkan pixel, membaca ukuran gambar, atau menganalisis perbedaan gambar secara mandiri. Gunakan **hanya** respons JSON resmi dari API `/api/figma-sync/screenshot` untuk mendapatkan nilai persentase similarity. Jangan membuang-buang token dan langkah eksekusi dengan membuat skrip/alat analisis visual sendiri.
+> 9. **ALUR STRUKTUR & LAYOUTING (NO EXTRA WRAPPERS)**: Gunakan sesedikit mungkin elemen pembungkus (DOM nodes/flat structure). Jangan pernah membungkus satu elemen tunggal dengan `div` hanya untuk menerapkan padding/margin jika padding/margin tersebut bisa diterapkan langsung pada elemen target itu sendiri. Terapkan alur kerja penyusunan layout berikut:
+>    - **Langkah 1 (Padding First)**: Tentukan padding kontainer utama/target terlebih dahulu untuk menetapkan batas wilayah terluar secara akurat.
+>    - **Langkah 2 (Layout & Spacing)**: Tentukan layout yang paling cocok (CSS Grid atau Flexbox) beserta nilai `gap` (jarak antar elemen anak) yang sesuai, alih-alih memberikan margin individual pada masing-masing elemen anak secara acak.
 
 ---
 
@@ -27,21 +42,31 @@ Sebagai AI agent, tugas Anda **murni hanya terbatas pada**:
 AI Agent diaktifkan menggunakan perintah dengan format berikut:
 
 ```bash
-/slice-it <TARGET_FILE> <FIGMA_PNG_PATH>
+/slice-it <TARGET_FILE> [FIGMA_PNG_PATH_OR_URL]
 ```
 
-_Contoh:_ `/slice-it src/stories/benefits/index.tsx .storybook/.storybook-addon-sync-figma/figma-sentri-benefits--tablet.png`
+_Contoh:_
 
-Sebagai AI Agent, ketika Anda menerima perintah ini, lakukan langkah ekstraksi data berikut secara otomatis:
+- `/slice-it src/stories/hero-about/index.tsx` (Metode Deteksi Otomatis)
+- `/slice-it src/stories/benefits/index.tsx .storybook/.storybook-addon-sync-figma/figma-sentri-benefits--tablet.png`
+
+Sebagai AI Agent, ketika Anda menerima perintah ini, lakukan langkah deteksi data berikut secara otomatis:
 
 1. **Target File & Folder**: Jadikan `<TARGET_FILE>` sebagai file utama untuk menulis perbaikan layout/slicing. Folder komponen adalah folder tempat file tersebut berada.
-2. **Ekstraksi Story ID**: Ekstrak **Story ID** secara otomatis dari nama file pada `<FIGMA_PNG_PATH>`. File figma overlay selalu mengikuti pola nama `figma-<storyId>.png`.
-   - _Contoh:_ Dari `.storybook/.storybook-addon-sync-figma/figma-sentri-benefits--tablet.png`, maka **Story ID** Anda adalah `sentri-benefits--tablet`.
+2. **Auto-Discovery Story ID**:
+   - Jika `[FIGMA_PNG_PATH_OR_URL]` tidak diberikan:
+     - Cari file `.stories.tsx` atau `.stories.jsx` di direktori yang sama dengan `<TARGET_FILE>`.
+     - Baca isinya untuk mendapatkan Storybook `title` (misal: `'Sentri/HeroAbout'`) dan nama Story yang diekspor (misal: `Default`, `Tablet`, `Mobile`).
+     - Bentuk **Story ID** berdasarkan aturan penamaan Storybook. Contoh: `title: 'Sentri/HeroAbout'` dan story `Default` -> ID: `sentri-heroabout--default` (gunakan default story terlebih dahulu kecuali ada instruksi lain).
+   - Jika `[FIGMA_PNG_PATH_OR_URL]` diberikan sebagai path gambar:
+     - Ekstrak **Story ID** secara otomatis dari nama file pada `[FIGMA_PNG_PATH_OR_URL]`. File figma overlay selalu mengikuti pola nama `figma-<storyId>.png` atau sejenisnya.
+3. **Auto-Discovery Figma URL / Node ID**:
+   - Cari di file `.stories.tsx` apakah terdapat parameter Figma Link (misalnya `parameters: { figma: '...' }`).
+   - Baca `.storybook/.storybook-addon-sync-figma/registry.json`. Cari entri dengan `storyId` yang sesuai untuk melihat apakah terdapat properti `figmaUrl`.
+   - Jika `figmaUrl` sama sekali tidak ditemukan dan Anda membutuhkan spesifikasi desain Figma terstruktur untuk Langkah 0, minta pengguna untuk menyediakannya.
 
 > [!IMPORTANT]
-> Jika argumen perintah `/slice-it` di atas belum lengkap diberikan oleh pengguna, Anda **wajib menanyakan informasi tersebut dalam Bahasa Inggris**.
->
-> _Contoh:_ "Please provide the target code file path and the figma overlay PNG path."
+> Jika target file tidak ditemukan atau argumen perintah `/slice-it` di atas tidak valid, Anda **wajib menanyakan konfirmasi atau informasi tambahan kepada pengguna**.
 
 ---
 
@@ -60,9 +85,33 @@ Jika ada prasyarat di atas yang belum terpenuhi:
 
 ---
 
-## Alur Kerja Iterasi (Maksimal 3 Siklus)
+## Langkah 0: Ambil Spesifikasi Desain Terstruktur (Figma-Context-MCP)
 
-Anda wajib membatasi proses iterasi **maksimal 3 siklus** untuk mencegah loop tak terbatas. Hentikan iterasi lebih awal jika skor kemiripan telah mencapai 100% atau memenuhi target tinggi (misalnya >=98%).
+Sebelum melakukan perubahan kode pertama kali, Anda **wajib** mengambil spesifikasi tata letak, warna, typography, dan padding terstruktur dari Figma agar perubahan pertama memiliki tingkat akurasi yang tinggi:
+
+1. **Cari Figma URL**:
+   - Baca file `.storybook/.storybook-addon-sync-figma/registry.json`. Cari entri dengan `storyId` yang sesuai untuk mendapatkan nilai `figmaUrl`.
+   - Jika `figmaUrl` tidak ditemukan di registry, minta pengguna untuk menyediakannya: _"Please provide the Figma URL for this story so I can fetch its layout data."_
+2. **Ekstrak File Key & Node ID**:
+   - Dari `figmaUrl` (misal: `https://www.figma.com/design/AbCd/My-Component?node-id=102-345`), ambil:
+     - **File Key**: `AbCd` (bagian setelah `/design/` atau `/file/`).
+     - **Node ID**: `102:345` (parameter query `node-id`, ganti karakter `-` dengan `:` jika ada).
+3. **Panggil Tool MCP `get_figma_data`**:
+   - Jalankan tool `get_figma_data` dari server MCP `figma` dengan parameter:
+     ```json
+     {
+       "fileKey": "<FILE_KEY>",
+       "nodeId": "<NODE_ID>"
+     }
+     ```
+4. **Gunakan Data Spesifikasi**:
+   - Gunakan data CSS/layout (padding, margin, gap, alignment, typography, warna hex, dll.) hasil keluaran tool tersebut sebagai panduan utama dalam menulis kode komponen React/HTML/CSS target.
+
+---
+
+## Alur Kerja Iterasi
+
+Lakukan iterasi perbaikan secara bertahap. Hentikan iterasi jika skor kemiripan telah mencapai atau melebihi 90%, atau jika Anda merasa perubahan otomatis lebih lanjut memerlukan intervensi manual dari pengguna.
 
 ### Langkah 1: Panggil API Perbandingan
 
@@ -107,26 +156,23 @@ Respon API akan mengembalikan payload JSON seperti berikut:
 ```
 
 - Ekstrak skor `similarity`.
-- Jika tingkat kemiripan bernilai `100.00` atau Anda telah menyelesaikan iterasi ke-3, hentikan proses dan buat laporan akhir.
+- Jika tingkat kemiripan bernilai `>= 90.00` atau jika Anda mendeteksi bahwa penyesuaian lebih lanjut memerlukan intervensi manual dari pengguna, hentikan proses dan buat laporan akhir.
 
 ### Langkah 3: Analisis Perbedaan Visual
 
 Jika tingkat kemiripan berada di bawah target:
 
-1. Temukan file gambar perbedaan (diff image) yang tertera di `diffSrc` (berlokasi di `.storybook/.storybook-addon-sync-figma/diff-<story-id>.png`).
-2. Identifikasi perbedaan pixel yang ditandai warna merah pada gambar diff. Periksa hal-hal berikut:
-   - Jarak margin atau padding yang kurang sesuai.
-   - Ukuran font (font size), ketebalan (weight), atau tipe font yang salah.
-   - Posisi alignment Flexbox atau CSS Grid.
-   - Ketidaksesuaian warna, border, atau bayangan (shadow).
+1. **JANGAN SEKALI-KALI mencoba membuka atau membaca file gambar diff** menggunakan tool file system apa pun (ini memboroskan token).
+2. Lakukan evaluasi secara logis dengan membandingkan kode saat ini dengan data spesifikasi desain terstruktur dari **Langkah 0** (Figma-Context-MCP).
+3. Bandingkan secara mandiri nilai CSS/styling antara kode saat ini dengan data spesifikasi Figma (misal: penamaan variabel warna, ketebalan font, ukuran font, line-height, dll.) untuk mendeteksi perbedaan visual.
 
 ### Langkah 4: Perbarui Kode Komponen
 
-Ubah CSS, utility classes Tailwind, atau struktur JSX di dalam **Folder Komponen** untuk memperbaiki perbedaan visual tersebut.
+Ubah utility classes Tailwind, atau struktur JSX di dalam **Folder Komponen** untuk memperbaiki perbedaan visual tersebut. Pastikan menggunakan utility classes Tailwind CSS dan mengimpor komponen Shadcn UI yang sudah tersedia di proyek (dari folder `@/stories/ui` atau path alias `@/ui`). **DILARANG KERAS** menggunakan inline styles (`style={{ ... }}`).
 
-### Langkah 5: Tunggu dan Ulangi
+### Langkah 5: Ulangi Proses
 
-Tunggu 1–2 detik agar dev server Storybook mendeteksi perubahan dan melakukan compile ulang, lalu ulangi proses mulai dari **Langkah 1**.
+Ulangi proses mulai dari **Langkah 1** setelah kode komponen diperbarui (pastikan dev server Storybook telah memuat ulang perubahan terbaru).
 
 ---
 
@@ -138,20 +184,18 @@ Di akhir iterasi, tampilkan laporan ringkasan dalam format berikut:
 
 - **Story ID**: `sentri-benefits--default`
 - **Folder Komponen**: `src/components/Benefits`
+- **Figma Node URL**: `https://www.figma.com/design/...`
 
 #### Riwayat Iterasi
 
+- **Langkah 0 (Figma Spec)**: Berhasil mendapatkan spesifikasi desain terstruktur dari Figma-Context-MCP.
 - **Iterasi 1**:
-  - Skor: `90.15%`
-  - Tindakan: Mengubah padding dari `p-4` menjadi `p-6` pada container utama untuk menyamakan jarak dengan Figma.
+  - Skor: `85.15%`
+  - Tindakan: Mengubah padding dari `p-4` menjadi `p-6` dan font size dari `text-sm` ke `text-base` berdasarkan data spec Figma.
 - **Iterasi 2**:
-  - Skor: `96.80%`
-  - Tindakan: Mengubah font weight judul dari `font-medium` menjadi `font-semibold` dan ukuran teks dari `text-sm` menjadi `text-base`.
-- **Iterasi 3**:
-  - Skor Akhir: `99.12%`
-  - Tindakan: Mengubah warna background ikon dari `bg-blue-500` menjadi `bg-blue-600` agar sesuai dengan warna Figma.
+  - Skor Akhir: `92.80%`
+  - Tindakan: Mengubah font weight judul dari `font-medium` menjadi `font-semibold` sesuai style Figma.
 
 #### Hasil Akhir
 
-- **Tingkat Kemiripan Akhir**: **`99.12%`**
-- **Link Diff Image**: [diff-sentri-benefits--default.png](file:///.storybook/.storybook-addon-sync-figma/diff-sentri-benefits--default.png)
+- **Tingkat Kemiripan Akhir**: **`92.80%`**

@@ -40,7 +40,15 @@ const channel = addons.getChannel();
 channel.on(CHANNEL_REQUEST_SCREENSHOT, async (payload?: RequestScreenshotPayload) => {
   if (typeof document === 'undefined') return;
 
-  const element = document.getElementById('storybook-root') || document.body;
+  const currentParams = new URLSearchParams(window.location.search);
+  const currentId = currentParams.get('id');
+  if (payload?.storyId && currentId !== payload.storyId) {
+    currentParams.set('id', payload.storyId);
+    window.location.search = currentParams.toString();
+    return;
+  }
+
+  const element = document.body;
 
   try {
     const overlayDimensions = await getOverlayDimensions(payload?.storyId);
@@ -69,6 +77,9 @@ channel.on(CHANNEL_REQUEST_SCREENSHOT, async (payload?: RequestScreenshotPayload
         transform: 'none',
         margin: '0',
         padding: '0',
+        width: `${width}px`,
+        height: `${height}px`,
+        overflow: 'hidden',
       },
       filter: (node) => {
         if (node instanceof HTMLElement && node.getAttribute('data-figma-sync-ignore') === 'true') return false;

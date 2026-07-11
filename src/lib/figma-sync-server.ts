@@ -202,6 +202,29 @@ function calculateImageSimilarity(overlayImage: PNG, screenshotImage: PNG, diffP
     );
   }
 
+  // Composite both images onto a solid white background to resolve transparency differences
+  for (let i = 0; i < overlayImage.data.length; i += 4) {
+    const r1 = overlayImage.data[i] ?? 0;
+    const g1 = overlayImage.data[i + 1] ?? 0;
+    const b1 = overlayImage.data[i + 2] ?? 0;
+    const a1 = (overlayImage.data[i + 3] ?? 255) / 255;
+
+    overlayImage.data[i] = Math.round(r1 * a1 + 255 * (1 - a1));
+    overlayImage.data[i + 1] = Math.round(g1 * a1 + 255 * (1 - a1));
+    overlayImage.data[i + 2] = Math.round(b1 * a1 + 255 * (1 - a1));
+    overlayImage.data[i + 3] = 255;
+
+    const r2 = screenshotImage.data[i] ?? 0;
+    const g2 = screenshotImage.data[i + 1] ?? 0;
+    const b2 = screenshotImage.data[i + 2] ?? 0;
+    const a2 = (screenshotImage.data[i + 3] ?? 255) / 255;
+
+    screenshotImage.data[i] = Math.round(r2 * a2 + 255 * (1 - a2));
+    screenshotImage.data[i + 1] = Math.round(g2 * a2 + 255 * (1 - a2));
+    screenshotImage.data[i + 2] = Math.round(b2 * a2 + 255 * (1 - a2));
+    screenshotImage.data[i + 3] = 255;
+  }
+
   const diffImage = new PNG({ width: overlayImage.width, height: overlayImage.height });
   const diffPixels = pixelmatch(
     overlayImage.data,

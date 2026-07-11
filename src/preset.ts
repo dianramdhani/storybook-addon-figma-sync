@@ -225,11 +225,15 @@ export const previewMiddleware = (router: ExpressRouter) => {
 
         pendingRequests.set(requestId, { resolve, reject, timeoutId });
 
-        serverChannel!.emit(CHANNEL_REQUEST_SCREENSHOT, {
-          purpose: 'capture',
-          storyId,
-          requestId,
-        });
+        serverChannel!.emit('selectStory', { storyId });
+        serverChannel!.emit('setCurrentStory', { storyId });
+        setTimeout(() => {
+          serverChannel!.emit(CHANNEL_REQUEST_SCREENSHOT, {
+            purpose: 'capture',
+            storyId,
+            requestId,
+          });
+        }, 1200);
       });
 
       writeScreenshotFile(storyId, image);
@@ -320,11 +324,15 @@ export const viteFinal = async (config: ViteConfig) => {
 
               pendingRequests.set(requestId, { resolve, reject, timeoutId });
 
-              serverChannel!.emit(CHANNEL_REQUEST_SCREENSHOT, {
-                purpose: 'capture',
-                storyId,
-                requestId,
-              });
+              serverChannel!.emit('selectStory', { storyId });
+              serverChannel!.emit('setCurrentStory', { storyId });
+              setTimeout(() => {
+                serverChannel!.emit(CHANNEL_REQUEST_SCREENSHOT, {
+                  purpose: 'capture',
+                  storyId,
+                  requestId,
+                });
+              }, 1200);
             });
 
             writeScreenshotFile(storyId, image);
@@ -410,11 +418,15 @@ export const webpackFinal = async (config: WebpackConfig) => {
 
             pendingRequests.set(requestId, { resolve, reject, timeoutId });
 
-            serverChannel!.emit(CHANNEL_REQUEST_SCREENSHOT, {
-              purpose: 'capture',
-              storyId,
-              requestId,
-            });
+            serverChannel!.emit('selectStory', { storyId });
+            serverChannel!.emit('setCurrentStory', { storyId });
+            setTimeout(() => {
+              serverChannel!.emit(CHANNEL_REQUEST_SCREENSHOT, {
+                purpose: 'capture',
+                storyId,
+                requestId,
+              });
+            }, 1200);
           });
 
           writeScreenshotFile(storyId, image);
