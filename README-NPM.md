@@ -4,7 +4,7 @@
 [![Storybook version](https://img.shields.io/badge/storybook-%3E%3D8.0.0-ff69b4.svg)](https://storybook.js.org/)
 [![License: MIT](https://img.shields.io/npm/l/storybook-addon-figma-sync.svg)](https://opensource.org/licenses/MIT)
 
-A Storybook addon designed to sync Figma design frames directly into Storybook stories. It enables developers to overlay mockups on top of live components with adjustable opacity, auto-resize the Storybook preview iframe to match Figma dimensions, and perform pixel-level visual regression diffing directly in the browser to ensure absolute design fidelity.
+A Storybook addon designed to sync Figma design frames directly into Storybook stories. It enables you to overlay mockups on top of live components with adjustable opacity, auto-resize the Storybook preview iframe to match Figma dimensions, and perform pixel-level visual regression diffing directly in the browser to ensure absolute design fidelity.
 
 ---
 
@@ -13,45 +13,29 @@ A Storybook addon designed to sync Figma design frames directly into Storybook s
 - **Figma Design Integration**: Input any Figma Frame URL in the Storybook toolbar to download and display design mockups.
 - **Interactive Visual Overlay**: Render the Figma mockup directly over your live component with customizable opacity (0% to 100%) and a toggle switch.
 - **Automated Component Sizing**: Storybook's preview iframe automatically resizes to the exact dimensions of the Figma design frame, ensuring realistic component alignment.
-- **Pixel-Matching Similarity Analysis**: Captures a high-fidelity DOM screenshot of the rendered component using `html-to-image` and compares it pixel-by-pixel with the Figma design using `pixelmatch`.
-- **REST API for Automation**: Trigger visual audits programmatically via a dev server endpoint, featuring automatic story navigation, render delay buffers, and solid white background compositing for consistent pixelmatch results.
+- **Pixel-Matching Similarity Analysis**: Compare your live component screenshot pixel-by-pixel with the Figma design using `pixelmatch`.
 - **Advanced Analysis Modal**: Switch between three comparison views in the visual audit panel:
   - **Side-by-Side**: Compare the Figma design and live component screenshot side by side.
   - **Overlay (Interactive)**: A draggable and zoomable canvas layer where the Figma mockup is overlaid on the component screenshot.
   - **Diff Only**: A visual diff highlighting the pixel mismatch errors in red.
-- **Single JSON Registry (`registry.json`)**: Persists all sync metadata—such as Story ID, Figma URLs, asset paths, similarity scores, overlay visibility, and opacity percentages—in a single database file, isolating settings per story.
+- **REST API for CI/CD Automation**: Trigger visual audits programmatically via a dev server endpoint, featuring automatic story navigation, render delay buffers, and solid white background compositing for consistent pixelmatch results.
 - **Caching Mechanism**: Downloaded Figma design images are stored locally under `.storybook/.storybook-addon-sync-figma/` for fast loading and reduced API consumption.
 
 ---
 
-## Data Flow & Component Interaction
+## How to Use (User Workflow)
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Developer
-    participant Manager as Storybook Manager Panel (FigmaSyncTool)
-    participant Preview as Storybook Preview Iframe (withOverlay)
-    participant NodeServer as Node Dev Server Middleware (preset.ts)
-    participant FigmaAPI as Figma REST API
+Using **Figma Sync** in your development workflow is simple:
 
-    Developer->>Manager: Input Figma Frame URL & Submit
-    Manager->>NodeServer: Emit CHANNEL_FETCH_OVERLAY (URL, storyId)
-    NodeServer->>FigmaAPI: Fetch Figma Frame Node Image (with FIGMA_TOKEN)
-    FigmaAPI-->>NodeServer: Return temporary Image URL
-    NodeServer->>NodeServer: Download & save locally as figma-<storyId>.png
-    NodeServer-->>Manager: Emit CHANNEL_OVERLAY_READY (Globals updated)
-    Manager->>Preview: Update global states (isVisible = true)
-    Preview->>Preview: Render Figma image overlay on top of story component
-    Developer->>Manager: Click "Analyze Screenshot"
-    Manager->>Preview: Emit CHANNEL_REQUEST_SCREENSHOT
-    Preview->>Preview: Capture DOM screenshot via html-to-image
-    Preview-->>NodeServer: Emit CHANNEL_SAVE_SCREENSHOT (base64 PNG)
-    NodeServer->>NodeServer: Save screenshot & compare with Figma overlay (pixelmatch)
-    NodeServer->>NodeServer: Generate Diff PNG
-    NodeServer-->>Manager: Emit CHANNEL_ANALYSIS_READY (Similarity data & paths)
-    Manager->>Developer: Open Analysis Modal (Side-by-side, Overlay, Diff)
-```
+1. **Paste Figma Frame URL**: Select a story in Storybook, open the **Figma Sync** panel in the toolbar, and paste the URL of your Figma frame.
+2. **Review Overlay**: The addon fetches the Figma frame, saves it locally, and overlays it on top of your component. You can toggle the overlay on/off and adjust its opacity using the slider.
+3. **Auto-Resize**: The Storybook preview iframe automatically resizes to match the width and height of the Figma design frame.
+4. **Run Analysis**: Click **"Analyze Screenshot"** to capture a screenshot of your live component.
+5. **Inspect Regression**: Use the **Analysis Modal** to review differences in **Side-by-Side**, **Overlay**, or **Diff** modes to spot mismatches down to the single pixel.
+
+### Workflow Diagram
+
+![User Workflow Diagram](./assets/data-flow.svg)
 
 ---
 
@@ -121,7 +105,7 @@ Add the local cache folder to your `.gitignore` to prevent committing cached Fig
 
 ## REST API for Automated Visual Audits
 
-The addon exposes a built-in REST API endpoint on the Storybook dev server for programmatic triggers (e.g., for CI pipelines, external/agentic scripts, or AI slicing tools).
+The addon exposes a built-in REST API endpoint on the Storybook dev server for programmatic triggers (e.g., for CI pipelines, external scripts, or automated tools).
 
 ### Endpoint
 

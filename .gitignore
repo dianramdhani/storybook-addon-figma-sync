@@ -7,5 +7,6 @@ build-storybook.log
 .eslintcache
 .husky/_
 *.png
+!assets/**/*.png
 .storybook/.storybook-addon-sync-figma/
 *.log
