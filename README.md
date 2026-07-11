@@ -15,6 +15,7 @@ A Storybook addon designed to sync Figma design frames directly into Storybook s
 - **Interactive Visual Overlay**: Render the Figma mockup directly over your live component with customizable opacity (0% to 100%) and a toggle switch.
 - **Automated Component Sizing**: Storybook's preview iframe automatically resizes to the exact dimensions of the Figma design frame, ensuring realistic component alignment.
 - **Pixel-Matching Similarity Analysis**: Captures a high-fidelity DOM screenshot of the rendered component using `html-to-image` and compares it pixel-by-pixel with the Figma design using `pixelmatch`.
+- **REST API for Automation**: Trigger visual audits programmatically via a dev server endpoint, featuring automatic story navigation, render delay buffers, and solid white background compositing for consistent pixelmatch results.
 - **Advanced Analysis Modal**: Switch between three comparison views in the visual audit panel:
   - **Side-by-Side**: Compare the Figma design and live component screenshot side by side.
   - **Overlay (Interactive)**: A draggable and zoomable canvas layer where the Figma mockup is overlaid on the component screenshot.
@@ -135,6 +136,36 @@ Add the local cache folder to your `.gitignore` to prevent committing cached Fig
 ```bash
 .storybook/.storybook-addon-sync-figma/
 ```
+
+---
+
+## REST API for Automated Visual Audits
+
+The addon exposes a built-in REST API endpoint on the Storybook dev server for programmatic triggers (e.g., for CI pipelines, external/agentic scripts, or AI slicing tools).
+
+### Endpoint
+
+```http
+GET http://localhost:6006/api/figma-sync/screenshot?storyId=<STORY_ID>
+```
+
+### Response Example
+
+```json
+{
+  "success": true,
+  "figmaSrc": "/figma-sync-assets/figma-<storyId>.png",
+  "screenshotSrc": "/figma-sync-assets/ss-<storyId>.png",
+  "diffSrc": "/figma-sync-assets/diff-<storyId>.png",
+  "similarity": 94.25
+}
+```
+
+### Key Behaviors
+
+1. **Auto-Navigation**: The dev server middleware automatically navigates the active story in the Storybook preview iframe to match the requested `storyId`, utilizing a `1200ms` delay buffer to let the render tree settle before capturing the screenshot.
+2. **Transparency Compositing**: To resolve false mismatches from alpha channel transparency (e.g., empty backgrounds, transparent PNGs), both the Figma mockup and the captured screenshot are composited onto a solid white background prior to pixelmatch comparison.
+3. **Ignoring Elements**: Specific HTML elements can be excluded from screenshots by applying the `data-figma-sync-ignore="true"` attribute to them.
 
 ---
 
