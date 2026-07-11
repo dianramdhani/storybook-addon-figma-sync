@@ -1,3 +1,15 @@
+# v1.0.2 (Sat Jul 11 2026)
+
+#### 🐛 Bug Fix
+
+- chore: rename figma cache directory references [#3](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/3) ([@dianramdhani](https://github.com/dianramdhani))
+
+#### Authors: 1
+
+- Dian Ramdhani Lubis ([@dianramdhani](https://github.com/dianramdhani))
+
+---
+
 # v1.0.1 (Sat Jul 11 2026)
 
 #### 🐛 Bug Fix
