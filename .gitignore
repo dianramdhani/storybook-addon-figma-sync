@@ -8,5 +8,5 @@ build-storybook.log
 .husky/_
 *.png
 !assets/**/*.png
-.storybook/.storybook-addon-sync-figma/
+.storybook/.storybook-addon-figma-sync/
 *.log

@@ -19,7 +19,7 @@ A Storybook addon designed to sync Figma design frames directly into Storybook s
   - **Overlay (Interactive)**: A draggable and zoomable canvas layer where the Figma mockup is overlaid on the component screenshot.
   - **Diff Only**: A visual diff highlighting the pixel mismatch errors in red.
 - **REST API for CI/CD Automation**: Trigger visual audits programmatically via a dev server endpoint, featuring automatic story navigation, render delay buffers, and solid white background compositing for consistent pixelmatch results.
-- **Caching Mechanism**: Downloaded Figma design images are stored locally under `.storybook/.storybook-addon-sync-figma/` for fast loading and reduced API consumption.
+- **Caching Mechanism**: Downloaded Figma design images are stored locally under `.storybook/.storybook-addon-figma-sync/` for fast loading and reduced API consumption.
 
 ---
 
@@ -78,7 +78,7 @@ const config: StorybookConfig = {
     },
   ],
   // Map local cache directory to static URL in Storybook
-  staticDirs: [{ from: './.storybook-addon-sync-figma', to: '/figma-sync-assets' }],
+  staticDirs: [{ from: './.storybook-addon-figma-sync', to: '/figma-sync-assets' }],
   framework: '@storybook/react-vite',
 };
 
@@ -98,7 +98,7 @@ FIGMA_TOKEN=your_figma_personal_access_token_here
 Add the local cache folder to your `.gitignore` to prevent committing cached Figma designs and screenshot differences:
 
 ```bash
-.storybook/.storybook-addon-sync-figma/
+.storybook/.storybook-addon-figma-sync/
 ```
 
 ---
