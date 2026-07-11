@@ -1,7 +1,7 @@
-import storybook from 'eslint-plugin-storybook';
 import js from '@eslint/js';
 import prettierRecommended from 'eslint-plugin-prettier/recommended';
-import reactPlugin from 'eslint-plugin-react';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
+import storybook from 'eslint-plugin-storybook';
 import tseslint from 'typescript-eslint';
 
 export default [
@@ -23,12 +23,14 @@ export default [
     ],
   },
   js.configs.recommended,
-  reactPlugin.configs.flat.recommended,
   {
-    settings: {
-      react: {
-        version: 'detect',
-      },
+    files: ['**/*.{js,jsx,ts,tsx,mjs,cjs}'],
+    plugins: {
+      'simple-import-sort': simpleImportSort,
+    },
+    rules: {
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
     },
   },
   ...tseslint.configs.recommended,

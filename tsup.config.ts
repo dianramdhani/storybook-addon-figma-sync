@@ -1,18 +1,11 @@
+import fs from 'node:fs';
+
 import { defineConfig, type Options } from 'tsup';
 
 const NODE_TARGET = 'node20.19'; // Minimum Node version supported by Storybook 10
 
-export default defineConfig(async () => {
-  // reading the three types of entries from package.json, which has the following structure:
-  // {
-  //  ...
-  //   "bundler": {
-  //     "managerEntries": ["./src/manager.ts"],
-  //     "previewEntries": ["./src/preview.ts", "./src/index.ts"]
-  //     "nodeEntries": ["./src/preset.ts"]
-  //   }
-  // }
-  const packageJson = (await import('./package.json', { with: { type: 'json' } })).default;
+export default defineConfig((options) => {
+  const packageJson = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf-8'));
 
   const {
     bundler: { managerEntries = [], previewEntries = [], nodeEntries = [] },
@@ -27,11 +20,12 @@ export default defineConfig(async () => {
     format: ['esm'],
     treeshake: true,
     splitting: true,
+    watch: options.watch,
     /*
      The following packages are provided by Storybook and should always be externalized
      Meaning they shouldn't be bundled with the addon, and they shouldn't be regular dependencies either
     */
-    external: ['react', 'react-dom', '@storybook/icons'],
+    external: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime', '@storybook/icons'],
   };
 
   const configs: Options[] = [];
