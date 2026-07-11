@@ -42,6 +42,8 @@
     "lint": "eslint --cache .",
     "lint:fix": "eslint --cache . --fix",
     "prepare": "husky",
+    "prepublishOnly": "node -e \"const fs = require('fs'); fs.renameSync('README.md', 'README-INTERNAL.md'); fs.copyFileSync('README-NPM.md', 'README.md');\"",
+    "postpublish": "node -e \"const fs = require('fs'); fs.renameSync('README-INTERNAL.md', 'README.md');\"",
     "prerelease": "zx scripts/prepublish-checks.js",
     "release": "yarn build && auto shipit",
     "start": "yarn build && run-p build:watch \"storybook --quiet\"",
