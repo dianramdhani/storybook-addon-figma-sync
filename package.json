@@ -7,8 +7,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/dianramdhani/storybook-addon-figma-sync"
+    "url": "git+https://github.com/dianramdhani/storybook-addon-figma-sync.git"
   },
+  "bugs": {
+    "url": "https://github.com/dianramdhani/storybook-addon-figma-sync/issues"
+  },
+  "homepage": "https://github.com/dianramdhani/storybook-addon-figma-sync#readme",
   "license": "MIT",
   "author": "Dian Ramdhani Lubis <dian.ramdhani@gmail.com>",
   "type": "module",
