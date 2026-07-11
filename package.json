@@ -1,6 +1,6 @@
 {
   "name": "storybook-addon-figma-sync",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Addon Storybook untuk membantu sync figma",
   "keywords": [
     "storybook-addon"
