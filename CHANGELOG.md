@@ -1,3 +1,15 @@
+# v1.0.0 (Sat Jul 11 2026)
+
+#### 💥 Breaking Change
+
+- feat(figma-sync): implement figma sync tool and storybook addon components [#1](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/1) ([@dianramdhani](https://github.com/dianramdhani))
+
+#### Authors: 1
+
+- Dian Ramdhani Lubis ([@dianramdhani](https://github.com/dianramdhani))
+
+---
+
 # v0.0.1 (Sat Jul 11 2026)
 
 #### ⚠️ Pushed to `main`
