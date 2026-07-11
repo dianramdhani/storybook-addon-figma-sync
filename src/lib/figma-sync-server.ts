@@ -15,7 +15,7 @@ import {
   getVersionedStoryOverlayAssetPath,
 } from '../constants';
 
-const FIGMA_STATIC_DIR = path.join(process.cwd(), '.storybook', '.storybook-addon-sync-figma');
+const FIGMA_STATIC_DIR = path.join(process.cwd(), '.storybook', '.storybook-addon-figma-sync');
 const REGISTRY_FILE = path.join(FIGMA_STATIC_DIR, 'registry.json');
 const DEFAULT_ENV_LOCATION = '../.env';
 
