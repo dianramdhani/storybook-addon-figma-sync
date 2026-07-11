@@ -5,3 +5,7 @@ build-storybook.log
 .DS_Store
 .env
 .eslintcache
+.husky/_
+*.png
+.storybook/.storybook-addon-sync-figma/
+*.log
