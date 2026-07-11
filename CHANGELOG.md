@@ -1,3 +1,15 @@
+# v1.0.1 (Sat Jul 11 2026)
+
+#### 🐛 Bug Fix
+
+- docs(readme): rewrite README-NPM for user POV and fix diagram rendering [#2](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/2) ([@dianramdhani](https://github.com/dianramdhani))
+
+#### Authors: 1
+
+- Dian Ramdhani Lubis ([@dianramdhani](https://github.com/dianramdhani))
+
+---
+
 # v1.0.0 (Sat Jul 11 2026)
 
 #### 💥 Breaking Change
