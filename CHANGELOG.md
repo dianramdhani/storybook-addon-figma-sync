@@ -1,3 +1,15 @@
+# v1.0.4 (Sat Jul 18 2026)
+
+#### 🐛 Bug Fix
+
+- chore(package): update metadata for Storybook catalog compliance [#5](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/5) ([@dianramdhani](https://github.com/dianramdhani))
+
+#### Authors: 1
+
+- Dian Ramdhani Lubis ([@dianramdhani](https://github.com/dianramdhani))
+
+---
+
 # v1.0.3 (Sat Jul 18 2026)
 
 #### 🐛 Bug Fix
