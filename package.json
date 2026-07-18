@@ -1,6 +1,6 @@
 {
   "name": "storybook-addon-figma-sync",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A Storybook addon to sync Figma designs with components and perform pixel-visual regression testing.",
   "keywords": [
     "storybook-addon",
