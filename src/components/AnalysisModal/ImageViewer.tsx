@@ -11,11 +11,10 @@ export const ViewerContainer = styled.div({
   flex: 1,
 });
 
-const ViewerTitle = styled.div<{ $textColor: string }>(({ $textColor }) => ({
+const ViewerTitle = styled.div({
   fontSize: '14px',
   fontWeight: 600,
-  color: $textColor,
-}));
+});
 
 export const ViewerViewport = styled.div<{ $bgColor: string; $scale: number }>(({ $bgColor, $scale }) => ({
   flex: 1,
@@ -76,11 +75,10 @@ export const ImageViewer = React.memo(function ImageViewer({
 }: ImageViewerProps) {
   const { scale, offset } = useTransform();
   const bgColor = isDarkMode ? '#16191f' : '#f0f0f0';
-  const textColor = isDarkMode ? 'rgba(255,255,255,0.72)' : 'rgba(0,0,0,0.72)';
 
   return (
     <ViewerContainer>
-      <ViewerTitle $textColor={textColor}>{title}</ViewerTitle>
+      <ViewerTitle>{title}</ViewerTitle>
       <ViewerViewport
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}

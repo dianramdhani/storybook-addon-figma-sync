@@ -7,10 +7,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { mergeConfig } from 'vite';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const figmaSyncDir = path.join(__dirname, '.storybook-addon-sync-figma');
-if (!fs.existsSync(figmaSyncDir)) {
-  fs.mkdirSync(figmaSyncDir, { recursive: true });
-}
+const figmaSyncDir = path.join(__dirname, '.storybook-addon-figma-sync');
+if (!fs.existsSync(figmaSyncDir)) fs.mkdirSync(figmaSyncDir, { recursive: true });
 
 const config = defineMain({
   stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|ts|tsx)'],
@@ -23,7 +21,7 @@ const config = defineMain({
       },
     },
   ],
-  staticDirs: [{ from: './.storybook-addon-sync-figma', to: '/figma-sync-assets' }],
+  staticDirs: [{ from: './.storybook-addon-figma-sync', to: '/figma-sync-assets' }],
   framework: '@storybook/react-vite',
   viteFinal: async (viteConfig) =>
     mergeConfig(viteConfig, {

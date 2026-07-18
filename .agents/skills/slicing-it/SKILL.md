@@ -22,7 +22,7 @@ Sebagai AI agent, tugas Anda **murni hanya terbatas pada**:
 > **ATURAN UTAMA & LARANGAN KERAS:**
 >
 > 1. **DILARANG KERAS** menulis skrip screenshot sendiri, mengotomasi browser menggunakan Playwright/Puppeteer, atau menjalankan browser headless.
-> 2. **DILARANG KERAS menggunakan tool `view_file` atau perintah bash untuk membaca/membuka file gambar** (seperti `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`) di dalam folder `.storybook/.storybook-addon-sync-figma/` atau folder lainnya. Membaca data gambar binary akan menghabiskan batas token context Anda secara drastis!
+> 2. **DILARANG KERAS menggunakan tool `view_file` atau perintah bash untuk membaca/membuka file gambar** (seperti `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`) di dalam folder `.storybook/.storybook-addon-figma-sync/` atau folder lainnya. Membaca data gambar binary akan menghabiskan batas token context Anda secara drastis!
 > 3. **Fokus Anda adalah membandingkan kode menggunakan**:
 >    - **Sumber Desain**: Output teks terstruktur (Markdown) dari tool MCP `figma/get_figma_data`.
 >    - **Alat Pembanding**: Nilai persentase skor `similarity` yang dikembalikan dari API `/api/figma-sync/screenshot?storyId=<STORY_ID>`.
@@ -48,7 +48,7 @@ AI Agent diaktifkan menggunakan perintah dengan format berikut:
 _Contoh:_
 
 - `/slice-it src/stories/hero-about/index.tsx` (Metode Deteksi Otomatis)
-- `/slice-it src/stories/benefits/index.tsx .storybook/.storybook-addon-sync-figma/figma-sentri-benefits--tablet.png`
+- `/slice-it src/stories/benefits/index.tsx .storybook/.storybook-addon-figma-sync/figma-sentri-benefits--tablet.png`
 
 Sebagai AI Agent, ketika Anda menerima perintah ini, lakukan langkah deteksi data berikut secara otomatis:
 
@@ -62,7 +62,7 @@ Sebagai AI Agent, ketika Anda menerima perintah ini, lakukan langkah deteksi dat
      - Ekstrak **Story ID** secara otomatis dari nama file pada `[FIGMA_PNG_PATH_OR_URL]`. File figma overlay selalu mengikuti pola nama `figma-<storyId>.png` atau sejenisnya.
 3. **Auto-Discovery Figma URL / Node ID**:
    - Cari di file `.stories.tsx` apakah terdapat parameter Figma Link (misalnya `parameters: { figma: '...' }`).
-   - Baca `.storybook/.storybook-addon-sync-figma/registry.json`. Cari entri dengan `storyId` yang sesuai untuk melihat apakah terdapat properti `figmaUrl`.
+   - Baca `.storybook/.storybook-addon-figma-sync/registry.json`. Cari entri dengan `storyId` yang sesuai untuk melihat apakah terdapat properti `figmaUrl`.
    - Jika `figmaUrl` sama sekali tidak ditemukan dan Anda membutuhkan spesifikasi desain Figma terstruktur untuk Langkah 0, minta pengguna untuk menyediakannya.
 
 > [!IMPORTANT]
@@ -90,7 +90,7 @@ Jika ada prasyarat di atas yang belum terpenuhi:
 Sebelum melakukan perubahan kode pertama kali, Anda **wajib** mengambil spesifikasi tata letak, warna, typography, dan padding terstruktur dari Figma agar perubahan pertama memiliki tingkat akurasi yang tinggi:
 
 1. **Cari Figma URL**:
-   - Baca file `.storybook/.storybook-addon-sync-figma/registry.json`. Cari entri dengan `storyId` yang sesuai untuk mendapatkan nilai `figmaUrl`.
+   - Baca file `.storybook/.storybook-addon-figma-sync/registry.json`. Cari entri dengan `storyId` yang sesuai untuk mendapatkan nilai `figmaUrl`.
    - Jika `figmaUrl` tidak ditemukan di registry, minta pengguna untuk menyediakannya: _"Please provide the Figma URL for this story so I can fetch its layout data."_
 2. **Ekstrak File Key & Node ID**:
    - Dari `figmaUrl` (misal: `https://www.figma.com/design/AbCd/My-Component?node-id=102-345`), ambil:
