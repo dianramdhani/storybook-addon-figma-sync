@@ -16,6 +16,7 @@ import {
   DEFAULT_OVERLAY_OPACITY,
   FIGMA_URL_KEY,
   type FigmaSyncErrorPayload,
+  getFigmaUrlGlobal,
   getOverlayOpacityGlobal,
   getOverlayVisibleGlobal,
   getVersionedStoryOverlayAssetPath,
@@ -78,6 +79,7 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
       setFetchState('success');
       setFetchMessage('Overlay downloaded');
       setOverlayVersion(version);
+      setLocalFigmaUrl(payload.figmaUrl);
       updateGlobals({
         [FIGMA_URL_KEY]: payload.figmaUrl,
         [OVERLAY_VISIBLE_KEY]: true,
@@ -143,6 +145,12 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
         });
       });
   }, [storyId, updateGlobals, api]);
+
+  const globalFigmaUrl = getFigmaUrlGlobal(globals);
+
+  useEffect(() => {
+    setLocalFigmaUrl(globalFigmaUrl);
+  }, [globalFigmaUrl]);
 
   useEffect(() => {
     setLocalOpacity(overlayOpacityPercent);
