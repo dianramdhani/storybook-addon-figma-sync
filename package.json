@@ -108,7 +108,8 @@
     "storybook": "*"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs}": [
