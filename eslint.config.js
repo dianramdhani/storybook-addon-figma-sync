@@ -20,6 +20,7 @@ export default [
       '.env',
       '.idea',
       '.vscode',
+      '.gitnexus/',
     ],
   },
   js.configs.recommended,

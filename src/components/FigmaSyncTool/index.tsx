@@ -16,6 +16,7 @@ import {
   DEFAULT_OVERLAY_OPACITY,
   FIGMA_URL_KEY,
   type FigmaSyncErrorPayload,
+  getFigmaUrlGlobal,
   getOverlayOpacityGlobal,
   getOverlayVisibleGlobal,
   getVersionedStoryOverlayAssetPath,
@@ -28,6 +29,7 @@ import {
   URL_PARAM_OVERLAY_OPACITY,
   URL_PARAM_OVERLAY_VISIBLE,
 } from '../../constants';
+import { isValidFigmaDesignUrl } from '../../lib/figma-url';
 import { AnalysisModal } from '../AnalysisModal';
 import { useOverlayAvailability, useOverlayIframeSizing } from '../useOverlayImage';
 import { PopoverContent } from './PopoverContent';
@@ -77,6 +79,7 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
       setFetchState('success');
       setFetchMessage('Overlay downloaded');
       setOverlayVersion(version);
+      setLocalFigmaUrl(payload.figmaUrl);
       updateGlobals({
         [FIGMA_URL_KEY]: payload.figmaUrl,
         [OVERLAY_VISIBLE_KEY]: true,
@@ -143,6 +146,12 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
       });
   }, [storyId, updateGlobals, api]);
 
+  const globalFigmaUrl = getFigmaUrlGlobal(globals);
+
+  useEffect(() => {
+    setLocalFigmaUrl(globalFigmaUrl);
+  }, [globalFigmaUrl]);
+
   useEffect(() => {
     setLocalOpacity(overlayOpacityPercent);
   }, [overlayOpacityPercent]);
@@ -160,6 +169,11 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   useOverlayIframeSizing(overlayImageSrc, showOverlay);
 
   const handleSubmit = useCallback(() => {
+    if (!isValidFigmaDesignUrl(localFigmaUrl)) {
+      setFetchState('error');
+      setFetchMessage('URL Figma tidak valid. Pastikan URL menggunakan HTTPS figma.com dengan node-id.');
+      return;
+    }
     setFetchState('loading');
     setFetchMessage('Downloading overlay from Figma...');
     updateGlobals({ [FIGMA_URL_KEY]: localFigmaUrl });

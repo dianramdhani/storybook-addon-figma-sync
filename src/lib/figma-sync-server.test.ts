@@ -89,4 +89,11 @@ describe('figma sync server helpers', () => {
 
     expect(() => analyzeSavedImages(STORY_ID)).toThrow(/Image dimensions do not match/);
   });
+
+  it('rejects overlay download requests for invalid or non-Figma URLs', async () => {
+    const { downloadOverlayFromFigma } = await import('./figma-sync-server');
+    await expect(
+      downloadOverlayFromFigma('https://example.com/design/LKQ4abYeAYNNm9g5w82w43/Sample-File?node-id=1%3A2', STORY_ID),
+    ).rejects.toThrow('Invalid Figma URL');
+  });
 });
