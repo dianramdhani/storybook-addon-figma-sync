@@ -10,3 +10,4 @@ build-storybook.log
 !assets/**/*.png
 .storybook/.storybook-addon-figma-sync/
 *.log
+.kiro
