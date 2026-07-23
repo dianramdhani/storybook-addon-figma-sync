@@ -1,3 +1,15 @@
+# v1.0.5 (Thu Jul 23 2026)
+
+#### 🐛 Bug Fix
+
+- feat(panel): add Figma embed panel for active story [#6](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/6) ([@dianramdhani](https://github.com/dianramdhani))
+
+#### Authors: 1
+
+- Dian Ramdhani Lubis ([@dianramdhani](https://github.com/dianramdhani))
+
+---
+
 # v1.0.4 (Sat Jul 18 2026)
 
 #### 🐛 Bug Fix
