@@ -28,6 +28,7 @@ import {
   URL_PARAM_OVERLAY_OPACITY,
   URL_PARAM_OVERLAY_VISIBLE,
 } from '../../constants';
+import { isValidFigmaDesignUrl } from '../../lib/figma-url';
 import { AnalysisModal } from '../AnalysisModal';
 import { useOverlayAvailability, useOverlayIframeSizing } from '../useOverlayImage';
 import { PopoverContent } from './PopoverContent';
@@ -160,6 +161,11 @@ export const FigmaSyncTool = memo(function FigmaSyncTool() {
   useOverlayIframeSizing(overlayImageSrc, showOverlay);
 
   const handleSubmit = useCallback(() => {
+    if (!isValidFigmaDesignUrl(localFigmaUrl)) {
+      setFetchState('error');
+      setFetchMessage('URL Figma tidak valid. Pastikan URL menggunakan HTTPS figma.com dengan node-id.');
+      return;
+    }
     setFetchState('loading');
     setFetchMessage('Downloading overlay from Figma...');
     updateGlobals({ [FIGMA_URL_KEY]: localFigmaUrl });
