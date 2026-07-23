@@ -14,6 +14,7 @@ import {
   getVersionedStoryDiffAssetPath,
   getVersionedStoryOverlayAssetPath,
 } from '../constants';
+import { isValidFigmaDesignUrl } from './figma-url';
 
 const FIGMA_STATIC_DIR = path.join(process.cwd(), '.storybook', '.storybook-addon-figma-sync');
 const REGISTRY_FILE = path.join(FIGMA_STATIC_DIR, 'registry.json');
@@ -146,13 +147,11 @@ function sanitizeFigmaNodeId(nodeId: string) {
 }
 
 function parseFigmaUrl(figmaUrl: string): ParsedFigmaUrl {
-  let url: URL;
-  try {
-    url = new URL(figmaUrl);
-  } catch {
+  if (!isValidFigmaDesignUrl(figmaUrl)) {
     throw new Error('Invalid Figma URL');
   }
 
+  const url = new URL(figmaUrl);
   const match = url.pathname.match(/^\/(?:file|design)\/([^/]+)/);
   if (!match?.[1]) throw new Error('Could not extract file key from Figma URL');
 
