@@ -1,5 +1,6 @@
 export const ADDON_ID = 'storybook-addon-figma-sync';
 export const TOOL_ID = `${ADDON_ID}/figma-sync`;
+export const PANEL_ID = `${ADDON_ID}/figma-panel`;
 export const FIGMA_URL_KEY = `${ADDON_ID}/figma-url`;
 export const OVERLAY_VISIBLE_KEY = `${ADDON_ID}/overlay-visible`;
 export const OVERLAY_OPACITY_KEY = `${ADDON_ID}/overlay-opacity`;
