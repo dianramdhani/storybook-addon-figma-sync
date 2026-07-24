@@ -140,12 +140,19 @@ export const FigmaEmbedPanel = memo(function FigmaEmbedPanel({ active = true }: 
         if (entry && entry.figmaUrl && isValidFigmaDesignUrl(entry.figmaUrl)) {
           setFigmaUrl(entry.figmaUrl);
           setFormInputUrl(entry.figmaUrl);
+          if (Array.isArray(entry.components)) {
+            setComponents(entry.components);
+            setDiscoveryState('success');
+          } else {
+            setDiscoveryState('idle');
+            setComponents([]);
+          }
         } else {
           setFigmaUrl('');
           setFormInputUrl('');
+          setDiscoveryState('idle');
+          setComponents([]);
         }
-        setDiscoveryState('idle');
-        setComponents([]);
         setDiscoveryMessage('');
         setIsComponentsDrawerOpen(false);
         setComponentPreviewUrls({});
