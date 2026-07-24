@@ -12,10 +12,20 @@ const FrameContainer = styled.div({
 
 const TopBar = styled.div({
   display: 'flex',
-  justify: 'flex-end',
+  justifyContent: 'flex-end',
+  gap: '12px',
   padding: '6px 12px',
   borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
   backgroundColor: 'rgba(0, 0, 0, 0.02)',
+});
+
+const ComponentsTrigger = styled.button({
+  padding: 0,
+  border: 0,
+  background: 'none',
+  fontSize: '12px',
+  color: '#006dea',
+  cursor: 'pointer',
 });
 
 const OpenLink = styled.a({
@@ -38,16 +48,28 @@ export interface FigmaEmbedFrameProps {
   embedUrl: string;
   figmaUrl: string;
   title?: string;
+  componentsOpen: boolean;
+  onComponentsClick: () => void;
 }
 
 export const FigmaEmbedFrame = memo(function FigmaEmbedFrame({
   embedUrl,
   figmaUrl,
   title = 'Figma Design Embed',
+  componentsOpen,
+  onComponentsClick,
 }: FigmaEmbedFrameProps) {
   return (
     <FrameContainer>
       <TopBar>
+        <ComponentsTrigger
+          type="button"
+          onClick={onComponentsClick}
+          aria-expanded={componentsOpen}
+          aria-label="Toggle Figma components drawer"
+        >
+          Components
+        </ComponentsTrigger>
         <OpenLink href={figmaUrl} target="_blank" rel="noreferrer" aria-label="Open in Figma (opens in new tab)">
           Open in Figma ↗
         </OpenLink>
