@@ -1,3 +1,15 @@
+# v1.1.0 (Fri Jul 24 2026)
+
+#### 🚀 Enhancement
+
+- feat(figma): add component discovery workflow [#8](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/8) ([@dianramdhani](https://github.com/dianramdhani))
+
+#### Authors: 1
+
+- Dian Ramdhani Lubis ([@dianramdhani](https://github.com/dianramdhani))
+
+---
+
 # v1.0.5 (Thu Jul 23 2026)
 
 #### 🐛 Bug Fix
