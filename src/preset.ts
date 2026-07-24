@@ -179,6 +179,7 @@ export const experimental_serverChannel = (channel: Channel, options: FigmaSyncA
   channel.on(CHANNEL_DISCOVER_COMPONENTS, async (data: DiscoverComponentsPayload) => {
     try {
       const result = await discoverComponentsFromFigma(data.figmaUrl, options);
+      updateRegistryEntry(data.storyId, { components: result.components });
       channel.emit(CHANNEL_COMPONENTS_READY, { storyId: data.storyId, ...result });
     } catch (err) {
       channel.emit(CHANNEL_COMPONENTS_ERROR, {
