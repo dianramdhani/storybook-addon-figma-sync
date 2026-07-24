@@ -1,3 +1,15 @@
+# v1.2.0 (Fri Jul 24 2026)
+
+#### 🚀 Enhancement
+
+- feat(discovery): persist component table cache [#9](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/9) ([@dianramdhani](https://github.com/dianramdhani))
+
+#### Authors: 1
+
+- Dian Ramdhani Lubis ([@dianramdhani](https://github.com/dianramdhani))
+
+---
+
 # v1.1.0 (Fri Jul 24 2026)
 
 #### 🚀 Enhancement
