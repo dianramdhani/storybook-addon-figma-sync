@@ -12,6 +12,8 @@ A Storybook addon designed to sync Figma design frames directly into Storybook s
 ## Key Features
 
 - **Figma Design Integration**: Input any Figma Frame URL in the Storybook toolbar to download and display design mockups.
+- **Figma Panel & Component Discovery**: Open the **Figma** bottom panel to inspect reusable components used by the selected layout. The drawer groups component-set variants, shows usage counts, and links resolvable components back to Figma.
+- **On-Demand Component Previews**: Preview a component as a PNG only when requested. Previews are cached for the current story, can be shown or hidden, and support scroll-to-zoom and drag-to-pan.
 - **Interactive Visual Overlay**: Render the Figma mockup directly over your live component with customizable opacity (0% to 100%) and a toggle switch.
 - **Automated Component Sizing**: Storybook's preview iframe automatically resizes to the exact dimensions of the Figma design frame, ensuring realistic component alignment.
 - **Pixel-Matching Similarity Analysis**: Captures a high-fidelity DOM screenshot of the rendered component using `html-to-image` and compares it pixel-by-pixel with the Figma design using `pixelmatch`.
@@ -42,7 +44,7 @@ A Storybook addon designed to sync Figma design frames directly into Storybook s
 
 ## Project Architecture
 
-The addon is structured into three main layers: **Manager UI** (the settings toolbar), **Preview iframe** (overlay and screenshot capture), and **Node server preset** (handles Figma API interaction and image comparisons).
+The addon is structured into three main layers: **Manager UI** (the toolbar and Figma panel), **Preview iframe** (overlay and screenshot capture), and **Node server preset** (handles Figma API interaction and image comparisons).
 
 ### Data Flow & Component Interaction
 
@@ -139,6 +141,20 @@ Add the local cache folder to your `.gitignore` to prevent committing cached Fig
 
 ---
 
+## Component Discovery Workflow
+
+After saving a valid Figma frame URL for a story:
+
+1. Open Storybook's **Figma** bottom panel.
+2. Select **Components** beside **Open in Figma**. The first open inspects the layout and lists the Figma components used by its instances.
+3. Use **Search components** to filter by component name or variant. Use **Refresh** only when the Figma layout has changed and you need to fetch the list again.
+4. Select **Show preview** to request a PNG preview from Figma. It is cached for the current story; use the mouse wheel to zoom and drag to pan. Select **Hide preview** to collapse it.
+5. Select **Open in Figma** to navigate to the resolved source component.
+
+Some component instances cannot be resolved to a source node by Figma. Those rows show `-` in the **Action** column and cannot be previewed or opened from the addon.
+
+---
+
 ## REST API for Automated Visual Audits
 
 The addon exposes a built-in REST API endpoint on the Storybook dev server for programmatic triggers (e.g., for CI pipelines, external/agentic scripts, or AI slicing tools).
@@ -185,12 +201,17 @@ storybook-addon-figma-sync/
 │   │   │   ├── index.tsx
 │   │   │   ├── Field.tsx
 │   │   │   └── PopoverContent.tsx
+│   │   ├── FigmaEmbedPanel/        # Bottom panel, Figma embed, and component discovery drawer
+│   │   │   ├── index.tsx
+│   │   │   ├── FigmaEmbedFrame.tsx
+│   │   │   └── FigmaComponentDiscovery.tsx
 │   │   ├── AnalysisModal/          # Side-by-side, overlay, and diff comparison panel
 │   │   │   ├── index.tsx
-│   │   │   ├── ImageViewer.tsx
 │   │   │   ├── SideBySideView.tsx
 │   │   │   ├── OverlayView.tsx
-│   │   │   ├── DiffView.tsx
+│   │   │   └── DiffView.tsx
+│   │   ├── ImageViewer/            # Shared zoomable image viewer and transform context
+│   │   │   ├── index.tsx
 │   │   │   └── TransformContext.tsx
 │   │   └── useOverlayImage.ts      # Hooks to verify image availability & resize preview iframe
 │   ├── lib/                        # Helper libraries

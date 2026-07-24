@@ -3,10 +3,10 @@ import { Button, Modal } from 'storybook/internal/components';
 import { styled } from 'storybook/theming';
 
 import type { AnalysisResult } from '../../constants';
+import { TransformProvider, useTransform } from '../ImageViewer';
 import { DiffView } from './DiffView';
 import { OverlayView } from './OverlayView';
 import { SideBySideView } from './SideBySideView';
-import { TransformProvider, useTransform } from './TransformContext';
 
 const ModalContent = styled.div({
   display: 'flex',

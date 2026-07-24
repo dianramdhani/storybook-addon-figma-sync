@@ -2,8 +2,7 @@ import React from 'react';
 import { styled } from 'storybook/theming';
 
 import type { AnalysisResult } from '../../constants';
-import { ViewerViewport } from './ImageViewer';
-import { useTransform } from './TransformContext';
+import { useTransform, ViewerViewport } from '../ImageViewer';
 
 const OverlayContainer = styled.div({
   display: 'flex',

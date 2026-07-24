@@ -45,7 +45,7 @@
     "prebuild": "node -e \"fs.rmSync('./dist', { recursive: true, force: true })\"",
     "build": "tsup",
     "build-storybook": "storybook build",
-    "build:watch": "yarn build --watch",
+    "build:watch": "tsup --watch",
     "commitlint": "commitlint",
     "eject-ts": "zx scripts/eject-typescript.js",
     "format": "prettier --write .",
