@@ -9,6 +9,7 @@ import {
   decodePngDataUrl,
   deleteScreenshotFile,
   discoverComponentsFromFigma,
+  getComponentPreviewFromFigma,
   getOverlayFilePath,
   getScreenshotFilePath,
   writeScreenshotFile,
@@ -135,9 +136,10 @@ describe('discoverComponentsFromFigma', () => {
                   ],
                 },
                 components: {
-                  '10:1': { name: 'Button / Primary', remote: false },
+                  '10:1': { name: 'Style=Primary', remote: false, componentSetId: '10:9' },
                   '20:1': { name: 'Card / Default', remote: true, key: 'remote-card-key' },
                 },
+                componentSets: { '10:9': { name: 'Button' } },
               },
             },
           }),
@@ -154,7 +156,8 @@ describe('discoverComponentsFromFigma', () => {
       components: [
         {
           componentId: '10:1',
-          name: 'Button / Primary',
+          name: 'Button',
+          variantName: 'Style=Primary',
           instanceCount: 2,
           figmaUrl: 'https://www.figma.com/design/source-file/?node-id=10%3A1',
         },
@@ -218,5 +221,20 @@ describe('discoverComponentsFromFigma', () => {
     await expect(
       discoverComponentsFromFigma('https://www.figma.com/design/source-file/Layout?node-id=1%3A2'),
     ).rejects.toThrow('Figma API request failed with status 403');
+  });
+
+  it('returns a PNG URL for a component preview', async () => {
+    vi.stubEnv('FIGMA_TOKEN', 'test-token');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ images: { '10:1': 'https://figma.example/preview.png' } }),
+      }),
+    );
+
+    await expect(
+      getComponentPreviewFromFigma('https://www.figma.com/design/source-file/Button?node-id=10%3A1'),
+    ).resolves.toBe('https://figma.example/preview.png');
   });
 });

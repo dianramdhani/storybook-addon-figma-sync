@@ -11,6 +11,8 @@ A Storybook addon designed to sync Figma design frames directly into Storybook s
 ## Key Features
 
 - **Figma Design Integration**: Input any Figma Frame URL in the Storybook toolbar to download and display design mockups.
+- **Figma Panel & Component Discovery**: Open the **Figma** bottom panel to inspect reusable components used by the selected layout. The drawer groups component-set variants, shows usage counts, and links resolvable components back to Figma.
+- **On-Demand Component Previews**: Request PNG previews only when needed. Previews are cached for the current story, can be shown or hidden, and support scroll-to-zoom and drag-to-pan.
 - **Interactive Visual Overlay**: Render the Figma mockup directly over your live component with customizable opacity (0% to 100%) and a toggle switch.
 - **Automated Component Sizing**: Storybook's preview iframe automatically resizes to the exact dimensions of the Figma design frame, ensuring realistic component alignment.
 - **Pixel-Matching Similarity Analysis**: Compare your live component screenshot pixel-by-pixel with the Figma design using `pixelmatch`.
@@ -29,9 +31,12 @@ Using **Figma Sync** in your development workflow is simple:
 
 1. **Paste Figma Frame URL**: Select a story in Storybook, open the **Figma Sync** panel in the toolbar, and paste the URL of your Figma frame.
 2. **Review Overlay**: The addon fetches the Figma frame, saves it locally, and overlays it on top of your component. You can toggle the overlay on/off and adjust its opacity using the slider.
-3. **Auto-Resize**: The Storybook preview iframe automatically resizes to match the width and height of the Figma design frame.
-4. **Run Analysis**: Click **"Analyze Screenshot"** to capture a screenshot of your live component.
-5. **Inspect Regression**: Use the **Analysis Modal** to review differences in **Side-by-Side**, **Overlay**, or **Diff** modes to spot mismatches down to the single pixel.
+3. **Inspect Components**: Open the **Figma** bottom panel and select **Components**. Search by component name or variant, then use **Show preview** for a cached, zoomable PNG preview or **Open in Figma** to inspect the source component.
+4. **Auto-Resize**: The Storybook preview iframe automatically resizes to match the width and height of the Figma design frame.
+5. **Run Analysis**: Click **"Analyze Screenshot"** to capture a screenshot of your live component.
+6. **Inspect Regression**: Use the **Analysis Modal** to review differences in **Side-by-Side**, **Overlay**, or **Diff** modes to spot mismatches down to the single pixel.
+
+Component discovery is cached after the first drawer open. Select **Refresh** when the Figma layout changes. If Figma cannot resolve an instance to a source component, its **Action** column shows `-`; it cannot be previewed or opened from the addon.
 
 ### Workflow Diagram
 

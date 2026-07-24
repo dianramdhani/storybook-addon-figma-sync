@@ -5,6 +5,8 @@ import type { Channel } from 'storybook/internal/channels';
 import {
   CHANNEL_ANALYSIS_ERROR,
   CHANNEL_ANALYSIS_READY,
+  CHANNEL_COMPONENT_PREVIEW_ERROR,
+  CHANNEL_COMPONENT_PREVIEW_READY,
   CHANNEL_COMPONENTS_ERROR,
   CHANNEL_COMPONENTS_READY,
   CHANNEL_DELETE_SCREENSHOT,
@@ -12,12 +14,14 @@ import {
   CHANNEL_FETCH_OVERLAY,
   CHANNEL_OVERLAY_ERROR,
   CHANNEL_OVERLAY_READY,
+  CHANNEL_PREVIEW_COMPONENT,
   CHANNEL_REQUEST_SCREENSHOT,
   CHANNEL_SAVE_SCREENSHOT,
   CHANNEL_SAVE_SETTINGS,
   type DiscoverComponentsPayload,
   type FetchOverlayPayload,
   type FigmaSyncErrorPayload,
+  type PreviewComponentPayload,
   type SaveScreenshotPayload,
   type SaveSettingsPayload,
 } from './constants';
@@ -27,6 +31,7 @@ import {
   discoverComponentsFromFigma,
   downloadOverlayFromFigma,
   type FigmaSyncAddonOptions,
+  getComponentPreviewFromFigma,
   getDiffFilePath,
   getOverlayFilePath,
   getScreenshotFilePath,
@@ -181,6 +186,24 @@ export const experimental_serverChannel = (channel: Channel, options: FigmaSyncA
         message: getComponentDiscoveryErrorMessage(err),
       });
       console.error('[Figma Sync] Failed to discover components:', err);
+    }
+  });
+
+  channel.on(CHANNEL_PREVIEW_COMPONENT, async (data: PreviewComponentPayload) => {
+    try {
+      const previewUrl = await getComponentPreviewFromFigma(data.figmaUrl, options);
+      channel.emit(CHANNEL_COMPONENT_PREVIEW_READY, {
+        storyId: data.storyId,
+        componentId: data.componentId,
+        previewUrl,
+      });
+    } catch (err) {
+      channel.emit(CHANNEL_COMPONENT_PREVIEW_ERROR, {
+        storyId: data.storyId,
+        componentId: data.componentId,
+        message: getComponentDiscoveryErrorMessage(err),
+      });
+      console.error('[Figma Sync] Failed to preview component:', err);
     }
   });
 

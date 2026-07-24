@@ -2,7 +2,7 @@ import React from 'react';
 import { styled } from 'storybook/theming';
 
 import type { AnalysisResult } from '../../constants';
-import { ImageViewer } from './ImageViewer';
+import { ImageViewer } from '../ImageViewer';
 
 const SideBySideContainer = styled.div({
   display: 'grid',
