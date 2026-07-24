@@ -5,23 +5,33 @@ import type { Channel } from 'storybook/internal/channels';
 import {
   CHANNEL_ANALYSIS_ERROR,
   CHANNEL_ANALYSIS_READY,
+  CHANNEL_COMPONENT_PREVIEW_ERROR,
+  CHANNEL_COMPONENT_PREVIEW_READY,
+  CHANNEL_COMPONENTS_ERROR,
+  CHANNEL_COMPONENTS_READY,
   CHANNEL_DELETE_SCREENSHOT,
+  CHANNEL_DISCOVER_COMPONENTS,
   CHANNEL_FETCH_OVERLAY,
   CHANNEL_OVERLAY_ERROR,
   CHANNEL_OVERLAY_READY,
+  CHANNEL_PREVIEW_COMPONENT,
   CHANNEL_REQUEST_SCREENSHOT,
   CHANNEL_SAVE_SCREENSHOT,
   CHANNEL_SAVE_SETTINGS,
+  type DiscoverComponentsPayload,
   type FetchOverlayPayload,
   type FigmaSyncErrorPayload,
+  type PreviewComponentPayload,
   type SaveScreenshotPayload,
   type SaveSettingsPayload,
 } from './constants';
 import {
   analyzeSavedImages,
   deleteScreenshotFile,
+  discoverComponentsFromFigma,
   downloadOverlayFromFigma,
   type FigmaSyncAddonOptions,
+  getComponentPreviewFromFigma,
   getDiffFilePath,
   getOverlayFilePath,
   getScreenshotFilePath,
@@ -36,6 +46,21 @@ interface PendingRequest {
   resolve: (dataUrl: string) => void;
   reject: (err: Error) => void;
   timeoutId: NodeJS.Timeout;
+}
+
+function getComponentDiscoveryErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : 'Unknown error while inspecting Figma components';
+
+  if (message.includes('Missing FIGMA_TOKEN') || message.includes('Env file not found')) {
+    return 'Figma component discovery requires FIGMA_TOKEN with file_content:read scope.';
+  }
+  if (message.includes('status 401') || message.includes('status 403')) {
+    return 'Figma rejected component discovery. Check FIGMA_TOKEN and access to this Figma file.';
+  }
+  if (message.includes('not found or is not accessible') || message.includes('status 404')) {
+    return 'The Figma layout node was not found or is not accessible.';
+  }
+  return message;
 }
 
 const pendingRequests = new Map<string, PendingRequest>();
@@ -148,6 +173,37 @@ export const experimental_serverChannel = (channel: Channel, options: FigmaSyncA
       };
       channel.emit(CHANNEL_OVERLAY_ERROR, errorPayload);
       console.error('[Figma Sync] Failed to download overlay:', err);
+    }
+  });
+
+  channel.on(CHANNEL_DISCOVER_COMPONENTS, async (data: DiscoverComponentsPayload) => {
+    try {
+      const result = await discoverComponentsFromFigma(data.figmaUrl, options);
+      channel.emit(CHANNEL_COMPONENTS_READY, { storyId: data.storyId, ...result });
+    } catch (err) {
+      channel.emit(CHANNEL_COMPONENTS_ERROR, {
+        storyId: data.storyId,
+        message: getComponentDiscoveryErrorMessage(err),
+      });
+      console.error('[Figma Sync] Failed to discover components:', err);
+    }
+  });
+
+  channel.on(CHANNEL_PREVIEW_COMPONENT, async (data: PreviewComponentPayload) => {
+    try {
+      const previewUrl = await getComponentPreviewFromFigma(data.figmaUrl, options);
+      channel.emit(CHANNEL_COMPONENT_PREVIEW_READY, {
+        storyId: data.storyId,
+        componentId: data.componentId,
+        previewUrl,
+      });
+    } catch (err) {
+      channel.emit(CHANNEL_COMPONENT_PREVIEW_ERROR, {
+        storyId: data.storyId,
+        componentId: data.componentId,
+        message: getComponentDiscoveryErrorMessage(err),
+      });
+      console.error('[Figma Sync] Failed to preview component:', err);
     }
   });
 

@@ -3,9 +3,20 @@ import { useChannel, useStorybookApi } from 'storybook/manager-api';
 import { styled } from 'storybook/theming';
 
 import {
+  CHANNEL_COMPONENT_PREVIEW_ERROR,
+  CHANNEL_COMPONENT_PREVIEW_READY,
+  CHANNEL_COMPONENTS_ERROR,
+  CHANNEL_COMPONENTS_READY,
+  CHANNEL_DISCOVER_COMPONENTS,
   CHANNEL_FETCH_OVERLAY,
   CHANNEL_OVERLAY_ERROR,
   CHANNEL_OVERLAY_READY,
+  CHANNEL_PREVIEW_COMPONENT,
+  type ComponentPreviewErrorPayload,
+  type ComponentPreviewReadyPayload,
+  type ComponentsErrorPayload,
+  type ComponentsReadyPayload,
+  type DiscoveredFigmaComponent,
   FIGMA_URL_KEY,
   type FigmaSyncErrorPayload,
   OVERLAY_VERSION_KEY,
@@ -13,6 +24,7 @@ import {
   type OverlayReadyPayload,
 } from '../../constants';
 import { getFigmaEmbedUrl, isValidFigmaDesignUrl } from '../../lib/figma-url';
+import { FigmaComponentDiscovery } from './FigmaComponentDiscovery';
 import { FigmaEmbedForm } from './FigmaEmbedForm';
 import { FigmaEmbedFrame } from './FigmaEmbedFrame';
 
@@ -21,7 +33,8 @@ const PanelContainer = styled.div({
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
-  overflow: 'auto',
+  overflow: 'hidden',
+  position: 'relative',
 });
 
 const StatusText = styled.div({
@@ -45,9 +58,25 @@ export const FigmaEmbedPanel = memo(function FigmaEmbedPanel({ active = true }: 
   const [fetchState, setFetchState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [fetchMessage, setFetchMessage] = useState('');
   const [isLoadingRegistry, setIsLoadingRegistry] = useState(false);
+  const [discoveryState, setDiscoveryState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [components, setComponents] = useState<ComponentsReadyPayload['components']>([]);
+  const [discoveryMessage, setDiscoveryMessage] = useState('');
+  const [isComponentsDrawerOpen, setIsComponentsDrawerOpen] = useState(false);
+  const [componentPreviewUrls, setComponentPreviewUrls] = useState<Record<string, string>>({});
+  const [componentPreviewErrors, setComponentPreviewErrors] = useState<Record<string, string>>({});
+  const [previewingComponentId, setPreviewingComponentId] = useState<string | null>(null);
 
   const emit = useChannel({
     [CHANNEL_OVERLAY_READY]: (payload: OverlayReadyPayload) => {
+      if (payload.figmaUrl !== figmaUrl) {
+        setDiscoveryState('idle');
+        setComponents([]);
+        setDiscoveryMessage('');
+        setIsComponentsDrawerOpen(false);
+        setComponentPreviewUrls({});
+        setComponentPreviewErrors({});
+        setPreviewingComponentId(null);
+      }
       setFetchState('success');
       setFetchMessage('');
       setFigmaUrl(payload.figmaUrl);
@@ -63,12 +92,40 @@ export const FigmaEmbedPanel = memo(function FigmaEmbedPanel({ active = true }: 
       setFetchState('error');
       setFetchMessage(payload.message);
     },
+    [CHANNEL_COMPONENTS_READY]: (payload: ComponentsReadyPayload) => {
+      if (payload.storyId !== api.getCurrentStoryData()?.id) return;
+      setDiscoveryState('success');
+      setDiscoveryMessage('');
+      setComponents(payload.components);
+    },
+    [CHANNEL_COMPONENTS_ERROR]: (payload: ComponentsErrorPayload) => {
+      if (payload.storyId !== api.getCurrentStoryData()?.id) return;
+      setDiscoveryState('error');
+      setDiscoveryMessage(payload.message);
+    },
+    [CHANNEL_COMPONENT_PREVIEW_READY]: (payload: ComponentPreviewReadyPayload) => {
+      if (payload.storyId !== api.getCurrentStoryData()?.id) return;
+      setComponentPreviewUrls((urls) => ({ ...urls, [payload.componentId]: payload.previewUrl }));
+      setPreviewingComponentId(null);
+    },
+    [CHANNEL_COMPONENT_PREVIEW_ERROR]: (payload: ComponentPreviewErrorPayload) => {
+      if (payload.storyId !== api.getCurrentStoryData()?.id) return;
+      setComponentPreviewErrors((errors) => ({ ...errors, [payload.componentId]: payload.message }));
+      setPreviewingComponentId(null);
+    },
   });
 
   useEffect(() => {
     if (!storyId) {
       setFigmaUrl('');
       setFormInputUrl('');
+      setDiscoveryState('idle');
+      setComponents([]);
+      setDiscoveryMessage('');
+      setIsComponentsDrawerOpen(false);
+      setComponentPreviewUrls({});
+      setComponentPreviewErrors({});
+      setPreviewingComponentId(null);
       return;
     }
 
@@ -87,10 +144,24 @@ export const FigmaEmbedPanel = memo(function FigmaEmbedPanel({ active = true }: 
           setFigmaUrl('');
           setFormInputUrl('');
         }
+        setDiscoveryState('idle');
+        setComponents([]);
+        setDiscoveryMessage('');
+        setIsComponentsDrawerOpen(false);
+        setComponentPreviewUrls({});
+        setComponentPreviewErrors({});
+        setPreviewingComponentId(null);
       })
       .catch(() => {
         setFigmaUrl('');
         setFormInputUrl('');
+        setDiscoveryState('idle');
+        setComponents([]);
+        setDiscoveryMessage('');
+        setIsComponentsDrawerOpen(false);
+        setComponentPreviewUrls({});
+        setComponentPreviewErrors({});
+        setPreviewingComponentId(null);
       })
       .finally(() => {
         setIsLoadingRegistry(false);
@@ -118,6 +189,37 @@ export const FigmaEmbedPanel = memo(function FigmaEmbedPanel({ active = true }: 
     [emit, formInputUrl, storyId],
   );
 
+  const handleInspect = useCallback(() => {
+    if (!isValidFigmaDesignUrl(figmaUrl)) return;
+    setDiscoveryState('loading');
+    setDiscoveryMessage('');
+    emit(CHANNEL_DISCOVER_COMPONENTS, { figmaUrl, storyId });
+  }, [emit, figmaUrl, storyId]);
+
+  const handleComponentsToggle = useCallback(() => {
+    if (isComponentsDrawerOpen) {
+      setIsComponentsDrawerOpen(false);
+      return;
+    }
+
+    setIsComponentsDrawerOpen(true);
+    if (discoveryState === 'idle') handleInspect();
+  }, [discoveryState, handleInspect, isComponentsDrawerOpen]);
+
+  const handlePreview = useCallback(
+    (component: DiscoveredFigmaComponent) => {
+      if (!component.figmaUrl || componentPreviewUrls[component.componentId]) return;
+      setPreviewingComponentId(component.componentId);
+      setComponentPreviewErrors((errors) => {
+        const remaining = { ...errors };
+        delete remaining[component.componentId];
+        return remaining;
+      });
+      emit(CHANNEL_PREVIEW_COMPONENT, { componentId: component.componentId, figmaUrl: component.figmaUrl, storyId });
+    },
+    [componentPreviewUrls, emit, storyId],
+  );
+
   // Requirement 1.2: Do not render iframe when active view is not story or storyId is empty
   if (!active || viewMode !== 'story' || !storyId) {
     return null;
@@ -138,11 +240,28 @@ export const FigmaEmbedPanel = memo(function FigmaEmbedPanel({ active = true }: 
   return (
     <PanelContainer>
       {hasValidUrl ? (
-        <FigmaEmbedFrame
-          embedUrl={getFigmaEmbedUrl(figmaUrl)}
-          figmaUrl={figmaUrl}
-          title={`Figma embed for story ${storyId}`}
-        />
+        <>
+          <FigmaEmbedFrame
+            embedUrl={getFigmaEmbedUrl(figmaUrl)}
+            figmaUrl={figmaUrl}
+            title={`Figma embed for story ${storyId}`}
+            componentsOpen={isComponentsDrawerOpen}
+            onComponentsClick={handleComponentsToggle}
+          />
+          {isComponentsDrawerOpen && (
+            <FigmaComponentDiscovery
+              components={components}
+              state={discoveryState}
+              message={discoveryMessage}
+              previewUrls={componentPreviewUrls}
+              previewErrors={componentPreviewErrors}
+              previewingComponentId={previewingComponentId}
+              onInspect={handleInspect}
+              onPreview={handlePreview}
+              onClose={() => setIsComponentsDrawerOpen(false)}
+            />
+          )}
+        </>
       ) : (
         <FigmaEmbedForm
           figmaUrl={formInputUrl}

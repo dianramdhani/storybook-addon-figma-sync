@@ -1,7 +1,7 @@
 import React from 'react';
 
 import type { AnalysisResult } from '../../constants';
-import { ImageViewer, ViewerContainer } from './ImageViewer';
+import { ImageViewer, ViewerContainer } from '../ImageViewer';
 
 export interface DiffViewProps {
   result: AnalysisResult;
