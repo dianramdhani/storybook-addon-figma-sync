@@ -77,6 +77,7 @@ interface FigmaFileNodesResponse {
 export interface RegistryEntry {
   storyId: string;
   figmaUrl?: string;
+  components?: DiscoveredFigmaComponent[];
   figmaPng?: string;
   screenshotPng?: string;
   diffPng?: string;
