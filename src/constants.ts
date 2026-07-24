@@ -19,6 +19,9 @@ export const CHANNEL_SAVE_SCREENSHOT = `${ADDON_ID}/save-screenshot`;
 export const CHANNEL_FETCH_OVERLAY = `${ADDON_ID}/fetch-overlay`;
 export const CHANNEL_OVERLAY_READY = `${ADDON_ID}/overlay-ready`;
 export const CHANNEL_OVERLAY_ERROR = `${ADDON_ID}/overlay-error`;
+export const CHANNEL_DISCOVER_COMPONENTS = `${ADDON_ID}/discover-components`;
+export const CHANNEL_COMPONENTS_READY = `${ADDON_ID}/components-ready`;
+export const CHANNEL_COMPONENTS_ERROR = `${ADDON_ID}/components-error`;
 export const CHANNEL_ANALYSIS_READY = `${ADDON_ID}/analysis-ready`;
 export const CHANNEL_ANALYSIS_ERROR = `${ADDON_ID}/analysis-error`;
 export const CHANNEL_DELETE_SCREENSHOT = `${ADDON_ID}/delete-screenshot`;
@@ -52,6 +55,31 @@ export interface FetchOverlayPayload {
 
 export interface OverlayReadyPayload {
   figmaUrl: string;
+}
+
+export interface DiscoverComponentsPayload {
+  figmaUrl: string;
+  storyId: string;
+}
+
+export interface DiscoveredFigmaComponent {
+  componentId: string;
+  name: string;
+  instanceCount: number;
+  figmaUrl?: string;
+  unavailableReason?: string;
+}
+
+export interface ComponentDiscoveryResult {
+  components: DiscoveredFigmaComponent[];
+}
+
+export interface ComponentsReadyPayload extends ComponentDiscoveryResult {
+  storyId: string;
+}
+
+export interface ComponentsErrorPayload extends FigmaSyncErrorPayload {
+  storyId: string;
 }
 
 export interface FigmaSyncErrorPayload {

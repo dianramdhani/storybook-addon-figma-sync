@@ -3,9 +3,14 @@ import { useChannel, useStorybookApi } from 'storybook/manager-api';
 import { styled } from 'storybook/theming';
 
 import {
+  CHANNEL_COMPONENTS_ERROR,
+  CHANNEL_COMPONENTS_READY,
+  CHANNEL_DISCOVER_COMPONENTS,
   CHANNEL_FETCH_OVERLAY,
   CHANNEL_OVERLAY_ERROR,
   CHANNEL_OVERLAY_READY,
+  type ComponentsErrorPayload,
+  type ComponentsReadyPayload,
   FIGMA_URL_KEY,
   type FigmaSyncErrorPayload,
   OVERLAY_VERSION_KEY,
@@ -13,6 +18,7 @@ import {
   type OverlayReadyPayload,
 } from '../../constants';
 import { getFigmaEmbedUrl, isValidFigmaDesignUrl } from '../../lib/figma-url';
+import { FigmaComponentDiscovery } from './FigmaComponentDiscovery';
 import { FigmaEmbedForm } from './FigmaEmbedForm';
 import { FigmaEmbedFrame } from './FigmaEmbedFrame';
 
@@ -21,7 +27,8 @@ const PanelContainer = styled.div({
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
-  overflow: 'auto',
+  overflow: 'hidden',
+  position: 'relative',
 });
 
 const StatusText = styled.div({
@@ -45,9 +52,19 @@ export const FigmaEmbedPanel = memo(function FigmaEmbedPanel({ active = true }: 
   const [fetchState, setFetchState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [fetchMessage, setFetchMessage] = useState('');
   const [isLoadingRegistry, setIsLoadingRegistry] = useState(false);
+  const [discoveryState, setDiscoveryState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [components, setComponents] = useState<ComponentsReadyPayload['components']>([]);
+  const [discoveryMessage, setDiscoveryMessage] = useState('');
+  const [isComponentsDrawerOpen, setIsComponentsDrawerOpen] = useState(false);
 
   const emit = useChannel({
     [CHANNEL_OVERLAY_READY]: (payload: OverlayReadyPayload) => {
+      if (payload.figmaUrl !== figmaUrl) {
+        setDiscoveryState('idle');
+        setComponents([]);
+        setDiscoveryMessage('');
+        setIsComponentsDrawerOpen(false);
+      }
       setFetchState('success');
       setFetchMessage('');
       setFigmaUrl(payload.figmaUrl);
@@ -63,12 +80,27 @@ export const FigmaEmbedPanel = memo(function FigmaEmbedPanel({ active = true }: 
       setFetchState('error');
       setFetchMessage(payload.message);
     },
+    [CHANNEL_COMPONENTS_READY]: (payload: ComponentsReadyPayload) => {
+      if (payload.storyId !== api.getCurrentStoryData()?.id) return;
+      setDiscoveryState('success');
+      setDiscoveryMessage('');
+      setComponents(payload.components);
+    },
+    [CHANNEL_COMPONENTS_ERROR]: (payload: ComponentsErrorPayload) => {
+      if (payload.storyId !== api.getCurrentStoryData()?.id) return;
+      setDiscoveryState('error');
+      setDiscoveryMessage(payload.message);
+    },
   });
 
   useEffect(() => {
     if (!storyId) {
       setFigmaUrl('');
       setFormInputUrl('');
+      setDiscoveryState('idle');
+      setComponents([]);
+      setDiscoveryMessage('');
+      setIsComponentsDrawerOpen(false);
       return;
     }
 
@@ -87,10 +119,18 @@ export const FigmaEmbedPanel = memo(function FigmaEmbedPanel({ active = true }: 
           setFigmaUrl('');
           setFormInputUrl('');
         }
+        setDiscoveryState('idle');
+        setComponents([]);
+        setDiscoveryMessage('');
+        setIsComponentsDrawerOpen(false);
       })
       .catch(() => {
         setFigmaUrl('');
         setFormInputUrl('');
+        setDiscoveryState('idle');
+        setComponents([]);
+        setDiscoveryMessage('');
+        setIsComponentsDrawerOpen(false);
       })
       .finally(() => {
         setIsLoadingRegistry(false);
@@ -118,6 +158,23 @@ export const FigmaEmbedPanel = memo(function FigmaEmbedPanel({ active = true }: 
     [emit, formInputUrl, storyId],
   );
 
+  const handleInspect = useCallback(() => {
+    if (!isValidFigmaDesignUrl(figmaUrl)) return;
+    setDiscoveryState('loading');
+    setDiscoveryMessage('');
+    emit(CHANNEL_DISCOVER_COMPONENTS, { figmaUrl, storyId });
+  }, [emit, figmaUrl, storyId]);
+
+  const handleComponentsToggle = useCallback(() => {
+    if (isComponentsDrawerOpen) {
+      setIsComponentsDrawerOpen(false);
+      return;
+    }
+
+    setIsComponentsDrawerOpen(true);
+    if (discoveryState === 'idle') handleInspect();
+  }, [discoveryState, handleInspect, isComponentsDrawerOpen]);
+
   // Requirement 1.2: Do not render iframe when active view is not story or storyId is empty
   if (!active || viewMode !== 'story' || !storyId) {
     return null;
@@ -138,11 +195,24 @@ export const FigmaEmbedPanel = memo(function FigmaEmbedPanel({ active = true }: 
   return (
     <PanelContainer>
       {hasValidUrl ? (
-        <FigmaEmbedFrame
-          embedUrl={getFigmaEmbedUrl(figmaUrl)}
-          figmaUrl={figmaUrl}
-          title={`Figma embed for story ${storyId}`}
-        />
+        <>
+          <FigmaEmbedFrame
+            embedUrl={getFigmaEmbedUrl(figmaUrl)}
+            figmaUrl={figmaUrl}
+            title={`Figma embed for story ${storyId}`}
+            componentsOpen={isComponentsDrawerOpen}
+            onComponentsClick={handleComponentsToggle}
+          />
+          {isComponentsDrawerOpen && (
+            <FigmaComponentDiscovery
+              components={components}
+              state={discoveryState}
+              message={discoveryMessage}
+              onInspect={handleInspect}
+              onClose={() => setIsComponentsDrawerOpen(false)}
+            />
+          )}
+        </>
       ) : (
         <FigmaEmbedForm
           figmaUrl={formInputUrl}

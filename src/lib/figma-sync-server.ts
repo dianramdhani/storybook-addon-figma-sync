@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
 
-import type { AnalysisResult } from '../constants';
+import type { AnalysisResult, ComponentDiscoveryResult, DiscoveredFigmaComponent } from '../constants';
 import {
   getScreenshotFilename,
   getStoryDiffFilename,
@@ -27,6 +27,44 @@ export interface FigmaSyncAddonOptions {
 interface ParsedFigmaUrl {
   fileKey: string;
   nodeId: string;
+}
+
+interface FigmaNode {
+  id: string;
+  name: string;
+  type: string;
+  componentId?: string;
+  children?: FigmaNode[];
+}
+
+interface FigmaComponentMetadata {
+  key?: string;
+  name?: string;
+  remote?: boolean;
+}
+
+interface FigmaComponentResponse {
+  meta?: {
+    file_key?: string;
+    node_id?: string;
+  };
+}
+
+interface CollectedComponent {
+  componentId: string;
+  name: string;
+  instanceCount: number;
+  metadata?: FigmaComponentMetadata;
+}
+
+interface FigmaFileNodesResponse {
+  nodes: Record<
+    string,
+    {
+      document: FigmaNode | null;
+      components?: Record<string, FigmaComponentMetadata>;
+    } | null
+  >;
 }
 
 export interface RegistryEntry {
@@ -184,6 +222,77 @@ async function downloadFile(url: string, filePath: string) {
   fs.writeFileSync(filePath, Buffer.from(arrayBuffer));
 }
 
+function getComponentFigmaUrl(fileKey: string, nodeId: string) {
+  return `https://www.figma.com/design/${fileKey}/?node-id=${encodeURIComponent(nodeId)}`;
+}
+
+function collectComponents(
+  node: FigmaNode,
+  components: Record<string, FigmaComponentMetadata>,
+  found = new Map<string, CollectedComponent>(),
+) {
+  if (node.type === 'INSTANCE' && node.componentId) {
+    const metadata = components[node.componentId];
+    const existing = found.get(node.componentId);
+
+    if (existing) {
+      existing.instanceCount += 1;
+    } else {
+      found.set(node.componentId, {
+        componentId: node.componentId,
+        name: metadata?.name || node.name,
+        instanceCount: 1,
+        metadata,
+      });
+    }
+  }
+
+  node.children?.forEach((child) => collectComponents(child, components, found));
+  return found;
+}
+
+async function resolveComponent(
+  component: CollectedComponent,
+  sourceFileKey: string,
+  token: string,
+): Promise<DiscoveredFigmaComponent> {
+  const { metadata, ...discoveredComponent } = component;
+
+  if (!metadata) {
+    return { ...discoveredComponent, unavailableReason: 'Figma did not return metadata for this component.' };
+  }
+
+  if (!metadata.remote) {
+    return {
+      ...discoveredComponent,
+      figmaUrl: getComponentFigmaUrl(sourceFileKey, component.componentId),
+    };
+  }
+
+  if (!metadata.key) {
+    return { ...discoveredComponent, unavailableReason: 'Figma did not return a key for this remote component.' };
+  }
+
+  try {
+    const response = await fetchJson<FigmaComponentResponse>(
+      `https://api.figma.com/v1/components/${metadata.key}`,
+      token,
+    );
+    const { file_key: fileKey, node_id: nodeId } = response.meta ?? {};
+
+    if (!fileKey || !nodeId) {
+      return {
+        ...discoveredComponent,
+        unavailableReason: 'Figma did not return a source location for this remote component.',
+      };
+    }
+
+    return { ...discoveredComponent, figmaUrl: getComponentFigmaUrl(fileKey, nodeId) };
+  } catch {
+    return { ...discoveredComponent, unavailableReason: 'Could not resolve the source of this remote component.' };
+  }
+}
+
 function readPngFromFile(filePath: string) {
   return PNG.sync.read(fs.readFileSync(filePath));
 }
@@ -277,6 +386,31 @@ export async function downloadOverlayFromFigma(figmaUrl: string, storyId: string
     figmaUrl,
     figmaPng: `/figma-sync-assets/${figmaPngFilename}`,
   });
+}
+
+export async function discoverComponentsFromFigma(
+  figmaUrl: string,
+  options: FigmaSyncAddonOptions = {},
+): Promise<ComponentDiscoveryResult> {
+  const token = getFigmaToken(options);
+  const { fileKey, nodeId } = parseFigmaUrl(figmaUrl);
+  const response = await fetchJson<FigmaFileNodesResponse>(
+    `https://api.figma.com/v1/files/${fileKey}/nodes?${new URLSearchParams({ ids: nodeId }).toString()}`,
+    token,
+  );
+  const result = response.nodes[nodeId];
+
+  if (!result?.document) {
+    throw new Error('Figma layout node was not found or is not accessible');
+  }
+
+  return {
+    components: await Promise.all(
+      [...collectComponents(result.document, result.components ?? {}).values()].map((component) =>
+        resolveComponent(component, fileKey, token),
+      ),
+    ),
+  };
 }
 
 export function analyzeSavedImages(storyId: string): AnalysisResult {
