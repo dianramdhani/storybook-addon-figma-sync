@@ -8,11 +8,15 @@ import {
   type DiscoverComponentsPayload,
 } from './constants';
 
-const { discoverComponentsFromFigma } = vi.hoisted(() => ({ discoverComponentsFromFigma: vi.fn() }));
+const { discoverComponentsFromFigma, updateRegistryEntry } = vi.hoisted(() => ({
+  discoverComponentsFromFigma: vi.fn(),
+  updateRegistryEntry: vi.fn(),
+}));
 
 vi.mock('./lib/figma-sync-server', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./lib/figma-sync-server')>()),
   discoverComponentsFromFigma,
+  updateRegistryEntry,
 }));
 
 import { experimental_serverChannel } from './preset';
@@ -42,6 +46,9 @@ describe('experimental_serverChannel component discovery', () => {
     await (handlers.get(CHANNEL_DISCOVER_COMPONENTS) as (value: DiscoverComponentsPayload) => Promise<void>)(payload);
 
     expect(discoverComponentsFromFigma).toHaveBeenCalledWith(payload.figmaUrl, { envLocation: '../.env.test' });
+    expect(updateRegistryEntry).toHaveBeenCalledWith(payload.storyId, {
+      components: [{ componentId: '1:2', name: 'Button', instanceCount: 2 }],
+    });
     expect(channel.emit).toHaveBeenCalledWith(CHANNEL_COMPONENTS_READY, {
       storyId: payload.storyId,
       components: [{ componentId: '1:2', name: 'Button', instanceCount: 2 }],
