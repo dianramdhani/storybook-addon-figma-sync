@@ -145,7 +145,7 @@
       "preact",
       "react-native"
     ],
-    "icon": "https://github.com/dianramdhani/storybook-addon-figma-sync/raw/refs/heads/main/logo-mini.png"
+    "icon": "https://github.com/dianramdhani/storybook-addon-figma-sync/raw/refs/heads/main/assets/logo-mini.png"
   },
   "packageManager": "yarn@1.22.22",
   "dependencies": {
