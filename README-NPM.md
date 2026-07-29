@@ -1,4 +1,4 @@
-![Storybook Addon Figma Sync](./assets/logo-full.jpg)
+<p align="center"><img src="assets/logo-full.jpg" alt="Storybook Addon Figma Sync" height="300"></p>
 
 # Storybook Addon Figma Sync
 
