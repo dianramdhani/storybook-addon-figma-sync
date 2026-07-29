@@ -1,3 +1,15 @@
+# v1.2.1 (Wed Jul 29 2026)
+
+#### 🐛 Bug Fix
+
+- docs(branding): add project logos to README and package metadata [#10](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/10) ([@dianramdhani](https://github.com/dianramdhani))
+
+#### Authors: 1
+
+- Dian Ramdhani Lubis ([@dianramdhani](https://github.com/dianramdhani))
+
+---
+
 # v1.2.0 (Fri Jul 24 2026)
 
 #### 🚀 Enhancement
