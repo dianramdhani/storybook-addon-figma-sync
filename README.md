@@ -1,3 +1,5 @@
+![Storybook Addon Figma Sync](https://github.com/dianramdhani/storybook-addon-figma-sync/raw/refs/heads/main/logo-full.jpg)
+
 # Storybook Addon Figma Sync
 
 [![npm version](https://img.shields.io/npm/v/storybook-addon-figma-sync.svg)](https://www.npmjs.com/package/storybook-addon-figma-sync)
