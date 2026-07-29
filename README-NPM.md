@@ -1,4 +1,4 @@
-![Storybook Addon Figma Sync](https://github.com/dianramdhani/storybook-addon-figma-sync/raw/refs/heads/main/logo-full.jpg)
+![Storybook Addon Figma Sync](./assets/logo-full.jpg)
 
 # Storybook Addon Figma Sync
 

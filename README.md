@@ -1,4 +1,4 @@
-![Storybook Addon Figma Sync](https://github.com/dianramdhani/storybook-addon-figma-sync/raw/refs/heads/main/logo-full.jpg)
+![Storybook Addon Figma Sync](./assets/logo-full.jpg)
 
 # Storybook Addon Figma Sync
 
@@ -50,32 +50,7 @@ The addon is structured into three main layers: **Manager UI** (the toolbar and 
 
 ### Data Flow & Component Interaction
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Developer
-    participant Manager as Storybook Manager Panel (FigmaSyncTool)
-    participant Preview as Storybook Preview Iframe (withOverlay)
-    participant NodeServer as Node Dev Server Middleware (preset.ts)
-    participant FigmaAPI as Figma REST API
-
-    Developer->>Manager: Input Figma Frame URL & Submit
-    Manager->>NodeServer: Emit CHANNEL_FETCH_OVERLAY (URL, storyId)
-    NodeServer->>FigmaAPI: Fetch Figma Frame Node Image (with FIGMA_TOKEN)
-    FigmaAPI-->>NodeServer: Return temporary Image URL
-    NodeServer->>NodeServer: Download & save locally as figma-<storyId>.png
-    NodeServer-->>Manager: Emit CHANNEL_OVERLAY_READY (Globals updated)
-    Manager->>Preview: Update global states (isVisible = true)
-    Preview->>Preview: Render Figma image overlay on top of story component
-    Developer->>Manager: Click "Analyze Screenshot"
-    Manager->>Preview: Emit CHANNEL_REQUEST_SCREENSHOT
-    Preview->>Preview: Capture DOM screenshot via html-to-image
-    Preview-->>NodeServer: Emit CHANNEL_SAVE_SCREENSHOT (base64 PNG)
-    NodeServer->>NodeServer: Save screenshot & compare with Figma overlay (pixelmatch)
-    NodeServer->>NodeServer: Generate Diff PNG
-    NodeServer-->>Manager: Emit CHANNEL_ANALYSIS_READY (Similarity data & paths)
-    Manager->>Developer: Open Analysis Modal (Side-by-side, Overlay, Diff)
-```
+![User Workflow Diagram](./assets/data-flow.svg)
 
 ---
 
