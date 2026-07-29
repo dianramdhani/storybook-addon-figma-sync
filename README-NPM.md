@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo-full.jpg" alt="Storybook Addon Figma Sync" height="300"></p>
+
 # Storybook Addon Figma Sync
 
 [![npm version](https://img.shields.io/npm/v/storybook-addon-figma-sync.svg)](https://www.npmjs.com/package/storybook-addon-figma-sync)
