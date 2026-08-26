@@ -1,3 +1,19 @@
+# v1.2.2 (Wed Aug 26 2026)
+
+#### 🐛 Bug Fix
+
+- chore(package): upgrade dependencies and expand package keywords [#11](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/11) ([@dianramdhani](https://github.com/dianramdhani))
+
+#### ⚠️ Pushed to `main`
+
+- fix(package): resolve audit vulnerabilities and update package keywords ([@dianramdhani](https://github.com/dianramdhani))
+
+#### Authors: 1
+
+- Dian Ramdhani Lubis ([@dianramdhani](https://github.com/dianramdhani))
+
+---
+
 # v1.2.1 (Wed Jul 29 2026)
 
 #### 🐛 Bug Fix
