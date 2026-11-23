@@ -1,3 +1,30 @@
+# v2.0.0 (Mon Nov 23 2026)
+
+#### 💥 Breaking Change
+
+- feat(figma-sync): implement figma sync tool and storybook addon components [#1](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/1) ([@dianramdhani](https://github.com/dianramdhani))
+
+#### 🚀 Enhancement
+
+- feat(discovery): persist component table cache [#9](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/9) ([@dianramdhani](https://github.com/dianramdhani))
+- feat(figma): add component discovery workflow [#8](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/8) ([@dianramdhani](https://github.com/dianramdhani))
+
+#### 🐛 Bug Fix
+
+- chore(deps): update dependencies and prepare for Storybook 11 [#13](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/13) ([@dianramdhani](https://github.com/dianramdhani))
+- feat(figma): add component discovery workflow [#7](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/7) ([@dianramdhani](https://github.com/dianramdhani))
+- feat(panel): add Figma embed panel for active story [#6](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/6) ([@dianramdhani](https://github.com/dianramdhani))
+- chore(package): update metadata for Storybook catalog compliance [#5](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/5) ([@dianramdhani](https://github.com/dianramdhani))
+- build(deps): upgrade dependencies and fix static asset path resolution [#4](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/4) ([@dianramdhani](https://github.com/dianramdhani))
+- chore: rename figma cache directory references [#3](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/3) ([@dianramdhani](https://github.com/dianramdhani))
+- docs(readme): rewrite README-NPM for user POV and fix diagram rendering [#2](https://github.com/dianramdhani/storybook-addon-figma-sync/pull/2) ([@dianramdhani](https://github.com/dianramdhani))
+
+#### Authors: 1
+
+- Dian Ramdhani Lubis ([@dianramdhani](https://github.com/dianramdhani))
+
+---
+
 # v1.2.2 (Wed Aug 26 2026)
 
 #### 🐛 Bug Fix
