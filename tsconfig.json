@@ -16,10 +16,8 @@
     "noImplicitOverride": true,
     "noImplicitAny": true,
     "lib": ["esnext", "dom", "dom.iterable"],
-    "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
     "rootDir": ".",
     "noEmit": true
